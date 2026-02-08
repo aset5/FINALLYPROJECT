@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+<h1 th:text="${internship.title}"></h1>
+<hr>
+<p><strong>Город:</strong> <span th:text="${internship.city}"></span></p>
+<p th:text="${internship.description}"></p>
+<button class="btn btn-success">Откликнуться на вакансию</button>
+<a href="/" class="btn btn-secondary">Назад</a>
+</body>
+</html>
