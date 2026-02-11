@@ -57,19 +57,23 @@ public class InternshipController {
 
     @PostMapping("/company/add")
     public String create(@ModelAttribute Internship internship, Principal principal) {
-        // 1. Находим пользователя, который сейчас вошел в систему
+        // 1. Получаем текущего пользователя (компанию)
         User currentUser = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
-        // 2. Находим компанию, которая привязана к этому пользователю
+        // 2. Находим профиль компании
         Company company = companyRepository.findByUser(currentUser);
 
-        // 3. Привязываем компанию к вакансии и ставим статус PENDING
+        // 3. Настройка вакансии
         internship.setCompany(company);
-        internship.setStatus(InternshipStatus.PENDING);
+
+        // МГНОВЕННАЯ ПУБЛИКАЦИЯ: ставим статус APPROVED сразу
+        internship.setStatus(InternshipStatus.APPROVED);
 
         internshipRepository.save(internship);
-        return "redirect:/?sent=true";
+
+        // Перенаправляем на главную, где вакансия уже появится
+        return "redirect:/?published=true";
     }
 
     // --- ДЛЯ АДМИНА (Публикация) ---
