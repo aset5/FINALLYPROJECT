@@ -1,54 +1,40 @@
 package com.example.internship.controllers;
 
-import com.example.internship.models.Company;
-import com.example.internship.models.Internship;
-import com.example.internship.models.InternshipStatus;
-import com.example.internship.models.User;
-import com.example.internship.repositories.CompanyRepository;
-import com.example.internship.repositories.InternshipRepository;
-import com.example.internship.repositories.UserRepository;
+import com.example.internship.models.*;
+import com.example.internship.repositories.*;
 import com.example.internship.services.InternshipService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
 import java.security.Principal;
 
 @Controller
 public class InternshipController {
 
-    // Подключаем необходимые репозитории, чтобы ошибка "cannot find symbol" исчезла
-    @Autowired
-    private InternshipService service;
+    @Autowired private InternshipService service;
+    @Autowired private UserRepository userRepository;
+    @Autowired private CompanyRepository companyRepository;
+    @Autowired private InternshipRepository internshipRepository;
+    @Autowired private InternshipApplicationRepository internshipApplicationRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private CompanyRepository companyRepository;
-
-    @Autowired
-    private InternshipRepository internshipRepository;
-
-    // ГЛАВНАЯ: Видна всем, показывает только APPROVED
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("internships", service.getApprovedInternships());
         return "index";
     }
 
+    @GetMapping("/internship/{id}")
+    public String details(@PathVariable Long id, Model model) {
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        model.addAttribute("internship", internship);
+        return "details"; // Убедитесь, что файл details.html существует
+    }
+
+
     @GetMapping("/login")
     public String login() { return "login"; }
 
-    // ДЕТАЛИ: Только для авторизованных
-    @GetMapping("/internship/{id}")
-    public String details(@PathVariable Long id, Model model) {
-        model.addAttribute("internship", service.getInternshipById(id));
-        return "details";
-    }
-
-    // --- ДЛЯ КОМПАНИИ (Создание заявки) ---
     @GetMapping("/company/add")
     public String addForm(Model model) {
         model.addAttribute("internship", new Internship());
@@ -57,35 +43,40 @@ public class InternshipController {
 
     @PostMapping("/company/add")
     public String create(@ModelAttribute Internship internship, Principal principal) {
-        // 1. Получаем текущего пользователя (компанию)
-        User currentUser = userRepository.findByUsername(principal.getName())
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
-
-        // 2. Находим профиль компании
-        Company company = companyRepository.findByUser(currentUser);
-
-        // 3. Настройка вакансии
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        Company company = companyRepository.findByUser(user);
         internship.setCompany(company);
-
-        // МГНОВЕННАЯ ПУБЛИКАЦИЯ: ставим статус APPROVED сразу
         internship.setStatus(InternshipStatus.APPROVED);
-
         internshipRepository.save(internship);
-
-        // Перенаправляем на главную, где вакансия уже появится
         return "redirect:/?published=true";
     }
 
-    // --- ДЛЯ АДМИНА (Публикация) ---
-    @GetMapping("/admin/moderation")
-    public String adminPanel(Model model) {
-        model.addAttribute("pendingItems", service.getPendingInternships());
-        return "admin-moderation";
+    @PostMapping("/internship/apply/{id}")
+    public String apply(@PathVariable Long id, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+
+        // Проверка: только STUDENT может откликаться
+        if (!user.getRole().contains("STUDENT")) {
+            return "redirect:/?error=not_student";
+        }
+
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        if (!internshipApplicationRepository.existsByStudentAndInternship(user, internship)) {
+            InternshipApplicationModel app = new InternshipApplicationModel();
+            app.setStudent(user);
+            app.setInternship(internship);
+            internshipApplicationRepository.save(app);
+        }
+        return "redirect:/?applied=true";
     }
 
-    @PostMapping("/admin/publish/{id}")
-    public String publish(@PathVariable Long id) {
-        service.approve(id); // Меняет статус на APPROVED
-        return "redirect:/admin/moderation";
+    @GetMapping("/company/applications")
+    public String viewApplications(Model model, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        Company company = companyRepository.findByUser(user);
+        model.addAttribute("apps", internshipApplicationRepository.findByInternship_Company(company));
+        return "company-applications";
     }
+
+
 }

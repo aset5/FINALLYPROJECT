@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Отклики студентов</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-5">
+<div class="container bg-white p-4 shadow-sm rounded">
+  <div class="d-flex justify-content-between mb-4">
+    <h2>Список откликов на ваши вакансии</h2>
+    <a href="/" class="btn btn-secondary">Назад</a>
+  </div>
+  <table class="table table-hover">
+    <thead class="table-dark">
+    <tr>
+      <th>Студент</th>
+      <th>Вакансия</th>
+      <th>Дата</th>
+      <th>Статус</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="app : ${apps}">
+      <td th:text="${app.student.username}"></td>
+      <td th:text="${app.internship.title}"></td>
+      <td th:text="${#temporals.format(app.applyDate, 'dd-MM-yyyy HH:mm')}"></td>
+      <td><span class="badge bg-warning text-dark" th:text="${app.status}"></span></td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>
