@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель Администратора | INTERN.PRO</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    :root { --sidebar-width: 250px; }
+    body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; }
+    .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; background: #212529; color: white; }
+    .main-content { margin-left: var(--sidebar-width); padding: 30px; }
+    .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .card-stats { border-left: 4px solid #ffc107; background: white; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar d-flex flex-column p-3">
+  <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+    <i class="bi bi-briefcase-fill me-2 fs-4 text-warning"></i>
+    <span class="fs-4 fw-bold">ADMIN PANEL</span>
+  </a>
+  <hr>
+  <ul class="nav nav-pills flex-column mb-auto">
+    <li class="nav-item">
+      <a href="/admin/dashboard" class="nav-link active bg-warning text-dark fw-bold">
+        <i class="bi bi-speedometer2 me-2"></i> Вакансии
+      </a>
+    </li>
+  </ul>
+  <hr>
+  <form th:action="@{/logout}" method="post">
+    <button class="btn btn-outline-danger w-100 btn-sm">Выйти</button>
+  </form>
+</div>
+
+<div class="main-content">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">Управление стажировками</h2>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addInternshipModal">
+      <i class="bi bi-plus-lg me-1"></i> Добавить вакансию
+    </button>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card card-stats p-3 shadow-sm border-0">
+        <div class="text-muted small uppercase">Всего вакансий</div>
+        <div class="h3 fw-bold m-0" th:text="${allInternships.size()}">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+      <tr>
+        <th style="width: 50px">ID</th>
+        <th>Позиция</th>
+        <th>Ло<i class="bi bi-geo-alt small"></i>кация</th>
+        <th>Статус</th>
+        <th class="text-end">Действия</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="job : ${allInternships}">
+        <td th:text="${job.id}" class="text-muted small">1</td>
+        <td>
+          <div th:text="${job.title}" class="fw-bold">Title</div>
+          <div class="small text-muted" th:text="${#strings.abbreviate(job.description, 50)}">Desc</div>
+        </td>
+        <td><span class="badge bg-light text-dark border" th:text="${job.city}">City</span></td>
+        <td>
+          <span th:if="${job.status.name() == 'APPROVED'}" class="badge bg-success-subtle text-success">Одобрено</span>
+          <span th:if="${job.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning">На проверке</span>
+        </td>
+        <td class="text-end">
+          <div class="d-flex justify-content-end gap-2">
+
+            <button class="btn btn-light btn-sm border" data-bs-toggle="modal" th:data-bs-target="'#editModal' + ${job.id}">
+              <i class="bi bi-pencil text-primary"></i>
+            </button>
+
+            <form th:action="@{'/admin/delete/' + ${job.id}}" method="post" onsubmit="return confirm('Удалить вакансию?')">
+              <button type="submit" class="btn btn-light btn-sm border">
+                <i class="bi bi-trash text-danger"></i>
+              </button>
+            </form>
+
+            <form th:if="${job.status.name() == 'PENDING'}" th:action="@{'/admin/approve/' + ${job.id}}" method="post">
+              <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i></button>
+            </form>
+          </div>
+
+          <div class="modal fade" th:id="'editModal' + ${job.id}" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content text-start">
+                <div class="modal-header bg-light">
+                  <h5 class="modal-title">Редактировать запись #<span th:text="${job.id}"></span></h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/edit}" method="post">
+                  <div class="modal-body">
+                    <input type="hidden" name="id" th:value="${job.id}">
+                    <div class="mb-3">
+                      <label class="form-label fw-bold small">Название вакансии</label>
+                      <input type="text" name="title" class="form-control" th:value="${job.title}" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold small">Город</label>
+                      <input type="text" name="city" class="form-control" th:value="${job.city}" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold small">Описание</label>
+                      <textarea name="description" class="form-control" rows="4" th:text="${job.description}" required></textarea>
+                    </div>
+                    <input type="hidden" name="status" th:value="${job.status}">
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary px-4">Сохранить изменения</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="addInternshipModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content text-start">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Новая стажировка</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form th:action="@{/admin/add}" method="post">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Заголовок</label>
+            <input type="text" name="title" class="form-control" required placeholder="Напр: Golang Developer">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Город</label>
+            <input type="text" name="city" class="form-control" required placeholder="Напр: Астана">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Описание</label>
+            <textarea name="description" class="form-control" rows="4" required placeholder="Опишите требования и условия..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Закрыть</button>
+          <button type="submit" class="btn btn-primary px-4">Создать вакансию</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
