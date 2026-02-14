@@ -14,28 +14,39 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // Шифрование паролей
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable()) // Оставляем выключенным для простоты разработки
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/register", "/css/**", "/js/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")    // Только для админов
-                        .requestMatchers("/company/**").hasRole("COMPANY") // Только для компаний
+                        // Публичные страницы
+                        .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
+
+                        // Защищенные разделы
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/company/**").hasRole("COMPANY")
+                        .requestMatchers("/student/**").hasRole("STUDENT") // ОБЯЗАТЕЛЬНО для доступа студента
+
                         .anyRequest().authenticated()
                 )
                 .formLogin(login -> login
                         .loginPage("/login")
                         .successHandler((request, response, authentication) -> {
-                            var authorities = authentication.getAuthorities();
+                            // Получаем список ролей текущего пользователя
+                            var roles = authentication.getAuthorities().stream()
+                                    .map(r -> r.getAuthority())
+                                    .toList();
 
-                            if (authorities.stream().anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"))) {
+                            // Логика перенаправления после входа
+                            if (roles.contains("ROLE_ADMIN")) {
                                 response.sendRedirect("/admin/dashboard");
-                            } else if (authorities.stream().anyMatch(r -> r.getAuthority().equals("ROLE_COMPANY"))) {
-                                response.sendRedirect("/company/dashboard"); // Редирект для компании
+                            } else if (roles.contains("ROLE_COMPANY")) {
+                                response.sendRedirect("/company/dashboard");
+                            } else if (roles.contains("ROLE_STUDENT")) {
+                                response.sendRedirect("/"); // Студенты идут на главную смотреть вакансии
                             } else {
                                 response.sendRedirect("/");
                             }
@@ -43,8 +54,14 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/")
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout") // Добавил параметр для уведомления
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                         .permitAll()
+                )
+                .exceptionHandling(ex -> ex
+                        .accessDeniedPage("/?error=no_access") // Куда отправлять если нет прав
                 );
 
         return http.build();

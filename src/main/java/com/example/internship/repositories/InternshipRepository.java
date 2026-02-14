@@ -1,14 +1,21 @@
 package com.example.internship.repositories;
 
 import com.example.internship.models.Internship;
+import com.example.internship.models.InternshipStatus;
+import com.example.internship.models.Company; // Импортируй модель Company
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import java.util.List;
 
+@Repository
 public interface InternshipRepository extends JpaRepository<Internship, Long> {
 
-    // Этот метод найдет все вакансии, принадлежащие конкретной компании по её ID
+    // Поиск вакансий по ID компании (для CompanyController)
     List<Internship> findByCompanyId(Long companyId);
 
-    // Также нам пригодится этот метод для главной страницы (только одобренные)
-    List<Internship> findByStatus(com.example.internship.models.InternshipStatus status);
+    // Поиск и удаление по объекту Company (вместо Object)
+    List<Internship> findByCompany(Company company);
+    void deleteByCompany(Company company);
+
+    List<Internship> findByStatus(InternshipStatus status);
 }

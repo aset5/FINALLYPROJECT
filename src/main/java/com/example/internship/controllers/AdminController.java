@@ -1,8 +1,14 @@
 package com.example.internship.controllers;
 
+import com.example.internship.models.Company;
 import com.example.internship.models.Internship;
 import com.example.internship.models.InternshipStatus;
+import com.example.internship.models.User;
+import com.example.internship.repositories.ApplicationRepository;
 import com.example.internship.repositories.InternshipRepository;
+import com.example.internship.repositories.UserRepository;
+import com.example.internship.repositories.CompanyRepository; // 1. Добавлен импорт
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,59 +20,74 @@ import java.util.List;
 @RequestMapping("/admin")
 public class AdminController {
 
-    @Autowired
     private final InternshipRepository internshipRepository;
+    private final UserRepository userRepository;
+    private final ApplicationRepository applicationRepository;
+    private final CompanyRepository companyRepository; // 2. Объявлено поле
 
-    public AdminController(InternshipRepository internshipRepository) {
+    @Autowired
+    public AdminController(InternshipRepository internshipRepository,
+                           UserRepository userRepository,
+                           ApplicationRepository applicationRepository,
+                           CompanyRepository companyRepository) { // 3. Добавлено в конструктор
         this.internshipRepository = internshipRepository;
+        this.userRepository = userRepository;
+        this.applicationRepository = applicationRepository;
+        this.companyRepository = companyRepository; // 4. Инициализация
     }
-    // 1. Отображение всех вакансий (уже должно быть)
+
     @GetMapping("/dashboard")
     public String adminDashboard(Model model) {
-        // Получаем все вакансии
-        List<Internship> allJobs = internshipRepository.findAll();
-
-        // Передаем в модель именно под тем именем, которое ждет HTML!
-        model.addAttribute("allInternships", allJobs);
-
-        // Если тебе нужен отдельный список для модерации
-        List<Internship> pending = allJobs.stream()
-                .filter(i -> i.getStatus() == InternshipStatus.PENDING)
-                .toList();
-        model.addAttribute("pendingInternships", pending);
-
+        model.addAttribute("allInternships", internshipRepository.findAll());
         return "admin/dashboard";
     }
 
-    // 2. CREATE: Добавление новой вакансии
-    @PostMapping("/add")
-    public String addInternship(@ModelAttribute Internship internship) {
-        internship.setStatus(InternshipStatus.APPROVED); // Сразу одобряем для теста
-        internshipRepository.save(internship);
-        return "redirect:/admin/dashboard";
-    }
-
-    // 3. DELETE: Удаление по ID
     @PostMapping("/delete/{id}")
+    @Transactional
     public String deleteInternship(@PathVariable Long id) {
-        internshipRepository.deleteById(id);
-        return "redirect:/admin/dashboard";
-    }
-
-    // 4. UPDATE: Редактирование (простой вариант через сохранение)
-    @PostMapping("/edit")
-    public String editInternship(@ModelAttribute Internship internship) {
-        // save() в JPA работает и на создание, и на обновление, если ID совпадает
-        internshipRepository.save(internship);
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        applicationRepository.deleteByInternship(internship);
+        internshipRepository.delete(internship);
         return "redirect:/admin/dashboard";
     }
 
     @PostMapping("/approve/{id}")
     public String approve(@PathVariable Long id) {
         Internship internship = internshipRepository.findById(id).orElseThrow();
-        internship.setStatus(InternshipStatus.APPROVED); // ОДОБРЯЕМ
+        internship.setStatus(InternshipStatus.APPROVED);
         internshipRepository.save(internship);
         return "redirect:/admin/dashboard";
     }
 
+    @GetMapping("/users")
+    public String listUsers(Model model) {
+        model.addAttribute("users", userRepository.findAll());
+        return "admin/users";
+    }
+
+    @Transactional
+    @PostMapping("/users/delete/{id}")
+    public String deleteUser(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElseThrow();
+
+        // 1. Удаляем отклики самого пользователя (если он студент)
+        applicationRepository.deleteByStudent(user);
+
+        // 2. Проверяем, есть ли у пользователя профиль компании
+        Company company = companyRepository.findByUserId(user.getId());
+
+        if (company != null) {
+            List<Internship> companyJobs = internshipRepository.findByCompany(company);
+            for (Internship job : companyJobs) {
+                applicationRepository.deleteByInternship(job);
+            }
+            internshipRepository.deleteByCompany(company);
+            companyRepository.delete(company);
+        }
+
+        // 3. Наконец, удаляем самого пользователя
+        userRepository.delete(user);
+
+        return "redirect:/admin/users";
+    }
 }

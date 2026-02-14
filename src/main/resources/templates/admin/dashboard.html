@@ -2,176 +2,87 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Панель Администратора | INTERN.PRO</title>
+  <title>Модерация | INTERN.PRO</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <style>
-    :root { --sidebar-width: 260px; }
-    body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; }
-    .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; background: #1a1d20; color: white; transition: all 0.3s; z-index: 1000; }
-    .main-content { margin-left: var(--sidebar-width); padding: 40px; }
-    .table-container { background: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-    .badge-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-    .badge-approved { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .stat-card { border: none; border-radius: 12px; transition: transform 0.2s; }
-    .stat-card:hover { transform: translateY(-5px); }
+    body { background-color: #f8f9fa; }
+    .navbar { background-color: #1a1d20; }
+    .card { border: none; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .status-pending { color: #f39c12; font-weight: bold; font-size: 0.85rem; }
+    .status-approved { color: #27ae60; font-weight: bold; font-size: 0.85rem; }
   </style>
 </head>
 <body>
 
-<div class="sidebar d-flex flex-column p-3">
-  <div class="d-flex align-items-center mb-4 px-2">
-    <i class="bi bi-shield-lock-fill text-warning fs-3 me-2"></i>
-    <span class="fs-4 fw-bold">ADMIN MODE</span>
-  </div>
-  <hr class="text-secondary">
-  <ul class="nav nav-pills flex-column mb-auto">
-    <li class="nav-item">
-      <a href="/admin/dashboard" class="nav-link active bg-warning text-dark fw-bold mb-2">
-        <i class="bi bi-list-check me-2"></i> Модерация
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4">
+  <div class="container">
+    <a class="navbar-brand fw-bold" th:href="@{/admin/dashboard}">
+      <i class="bi bi-shield-lock text-warning me-2"></i>ADMIN PANEL
+    </a>
+    <div class="navbar-nav ms-auto align-items-center">
+      <a class="nav-link active fw-bold" th:href="@{/admin/dashboard}">Вакансии</a>
+      <a class="btn btn-outline-warning btn-sm ms-3 px-3" th:href="@{/admin/users}">
+        <i class="bi bi-people-fill me-1"></i> Пользователи
       </a>
-    </li>
-    <li>
-      <a href="#" class="nav-link text-white-50">
-        <i class="bi bi-people me-2"></i> Пользователи
-      </a>
-    </li>
-  </ul>
-  <hr class="text-secondary">
-  <form th:action="@{/logout}" method="post">
-    <button class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center">
-      <i class="bi bi-box-arrow-left me-2"></i> Выйти
-    </button>
-  </form>
-</div>
-
-<div class="main-content">
-  <div class="d-flex justify-content-between align-items-end mb-4">
-    <div>
-      <h1 class="fw-bold mb-1">Управление контентом</h1>
-      <p class="text-muted">Проверяйте новые заявки от компаний перед публикацией</p>
-    </div>
-    <div class="text-end text-muted small">
-      <i class="bi bi-calendar3 me-1"></i> <span th:text="${#calendars.format(#calendars.createNow(), 'dd MMMM yyyy')}"></span>
+      <form th:action="@{/logout}" method="post" class="ms-4">
+        <button type="submit" class="btn btn-danger btn-sm px-3">Выйти</button>
+      </form>
     </div>
   </div>
+</nav>
 
-  <div class="row mb-4">
-    <div class="col-md-4">
-      <div class="card stat-card shadow-sm p-3">
-        <div class="d-flex align-items-center">
-          <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
-            <i class="bi bi-briefcase text-primary fs-4"></i>
-          </div>
-          <div>
-            <div class="text-muted small">Всего вакансий</div>
-            <div class="h4 fw-bold mb-0" th:text="${allInternships.size()}">0</div>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold m-0">Модерация вакансий</h2>
+    <span class="badge bg-white text-dark shadow-sm p-2 px-3 rounded-pill text-muted">
+            <i class="bi bi-clock-history me-2"></i>Панель управления
+        </span>
   </div>
 
-  <div class="table-container">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-      <tr>
-        <th class="border-0">ID</th>
-        <th class="border-0">Информация о вакансии</th>
-        <th class="border-0">Город</th>
-        <th class="border-0">Статус</th>
-        <th class="border-0 text-end">Действия</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr th:each="job : ${allInternships}">
-        <td th:text="${job.id}" class="text-muted fw-bold">1</td>
-        <td>
-          <div th:text="${job.title}" class="fw-bold text-dark mb-0">Java Dev</div>
-          <div class="text-muted small" th:text="${#strings.abbreviate(job.description, 60)}">Desc...</div>
-        </td>
-        <td>
-          <i class="bi bi-geo-alt text-danger me-1 small"></i>
-          <span th:text="${job.city}">City</span>
-        </td>
-        <td>
-                        <span th:if="${job.status.name() == 'PENDING'}" class="badge badge-pending">
-                             <i class="bi bi-hourglass-split me-1"></i> На проверке
-                        </span>
-          <span th:if="${job.status.name() == 'APPROVED'}" class="badge badge-approved">
-                            <i class="bi bi-check2-circle me-1"></i> Опубликовано
-                        </span>
-        </td>
-        <td class="text-end">
-          <div class="d-flex justify-content-end gap-2">
-
+  <div class="card p-4">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light text-secondary">
+        <tr>
+          <th class="py-3">ID</th>
+          <th class="py-3">Вакансия</th>
+          <th class="py-3">Компания</th>
+          <th class="py-3 text-center">Статус</th>
+          <th class="py-3 text-end">Действия</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="job : ${allInternships}">
+          <td th:text="${job.id}">1</td>
+          <td th:text="${job.title}" class="fw-bold text-dark">Java Intern</td>
+          <td th:text="${job.company != null ? job.company.name : '—'}">Google</td>
+          <td class="text-center">
+                            <span th:class="${job.status.name() == 'PENDING' ? 'status-pending' : 'status-approved'}"
+                                  th:text="${job.status}">PENDING</span>
+          </td>
+          <td class="text-end">
             <form th:if="${job.status.name() == 'PENDING'}"
-                  th:action="@{'/admin/approve/' + ${job.id}}" method="post">
-              <button type="submit" class="btn btn-success btn-sm px-3 shadow-sm">
-                <i class="bi bi-check-lg me-1"></i> Одобрить
-              </button>
+                  th:action="@{/admin/approve/{id}(id=${job.id})}" method="post" class="d-inline">
+              <button type="submit" class="btn btn-success btn-sm me-1 rounded-pill px-3">Одобрить</button>
             </form>
-
-            <button class="btn btn-outline-primary btn-sm"
-                    data-bs-toggle="modal"
-                    th:data-bs-target="'#editModal' + ${job.id}">
-              <i class="bi bi-pencil"></i>
-            </button>
-
-            <form th:action="@{'/admin/delete/' + ${job.id}}" method="post"
-                  onsubmit="return confirm('Вы уверены, что хотите удалить эту вакансию?')">
-              <button type="submit" class="btn btn-outline-danger btn-sm">
+            <form th:action="@{/admin/delete/{id}(id=${job.id})}" method="post" class="d-inline">
+              <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle shadow-sm"
+                      onclick="return confirm('Удалить вакансию?')">
                 <i class="bi bi-trash"></i>
               </button>
             </form>
-          </div>
-
-          <div class="modal fade" th:id="'editModal' + ${job.id}" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-              <div class="modal-content text-start border-0 shadow">
-                <div class="modal-header border-0 bg-light">
-                  <h5 class="modal-title fw-bold">Правка вакансии #<span th:text="${job.id}"></span></h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form th:action="@{/admin/edit}" method="post">
-                  <div class="modal-body p-4">
-                    <input type="hidden" name="id" th:value="${job.id}">
-                    <div class="mb-3">
-                      <label class="form-label small fw-bold">Заголовок</label>
-                      <input type="text" name="title" class="form-control" th:value="${job.title}" required>
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label small fw-bold">Город</label>
-                      <input type="text" name="city" class="form-control" th:value="${job.city}" required>
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label small fw-bold">Описание</label>
-                      <textarea name="description" class="form-control" rows="5" th:text="${job.description}" required></textarea>
-                    </div>
-                    <input type="hidden" name="status" th:value="${job.status}">
-                  </div>
-                  <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Закрыть</button>
-                    <button type="submit" class="btn btn-warning px-4 fw-bold text-dark">Сохранить изменения</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </td>
-      </tr>
-      <tr th:if="${allInternships.isEmpty()}">
-        <td colspan="5" class="text-center py-5 text-muted">
-          <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-          Новых заявок пока нет.
-        </td>
-      </tr>
-      </tbody>
-    </table>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div th:if="${#lists.isEmpty(allInternships)}" class="text-center py-5">
+        <i class="bi bi-inbox display-4 text-muted"></i>
+        <p class="mt-2 text-muted">Список вакансий пуст.</p>
+      </div>
+    </div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
