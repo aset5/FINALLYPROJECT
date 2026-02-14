@@ -16,4 +16,5 @@ public class Company {
     @OneToOne
     @JoinColumn(name = "user_id")
     private User user; // Связь с логином/паролем
+
 }

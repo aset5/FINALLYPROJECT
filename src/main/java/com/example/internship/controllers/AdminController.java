@@ -7,17 +7,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
 
     @Autowired
-    private InternshipRepository internshipRepository;
+    private final InternshipRepository internshipRepository;
 
+    public AdminController(InternshipRepository internshipRepository) {
+        this.internshipRepository = internshipRepository;
+    }
     // 1. Отображение всех вакансий (уже должно быть)
     @GetMapping("/dashboard")
-    public String dashboard(Model model) {
-        model.addAttribute("allInternships", internshipRepository.findAll());
+    public String adminDashboard(Model model) {
+        // Получаем все вакансии
+        List<Internship> allJobs = internshipRepository.findAll();
+
+        // Передаем в модель именно под тем именем, которое ждет HTML!
+        model.addAttribute("allInternships", allJobs);
+
+        // Если тебе нужен отдельный список для модерации
+        List<Internship> pending = allJobs.stream()
+                .filter(i -> i.getStatus() == InternshipStatus.PENDING)
+                .toList();
+        model.addAttribute("pendingInternships", pending);
+
         return "admin/dashboard";
     }
 
@@ -43,4 +60,13 @@ public class AdminController {
         internshipRepository.save(internship);
         return "redirect:/admin/dashboard";
     }
+
+    @PostMapping("/approve/{id}")
+    public String approve(@PathVariable Long id) {
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        internship.setStatus(InternshipStatus.APPROVED); // ОДОБРЯЕМ
+        internshipRepository.save(internship);
+        return "redirect:/admin/dashboard";
+    }
+
 }

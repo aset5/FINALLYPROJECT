@@ -7,48 +7,68 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <style>
-    :root { --sidebar-width: 250px; }
+    :root { --sidebar-width: 260px; }
     body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; }
-    .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; background: #212529; color: white; }
-    .main-content { margin-left: var(--sidebar-width); padding: 30px; }
-    .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .card-stats { border-left: 4px solid #ffc107; background: white; }
+    .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; background: #1a1d20; color: white; transition: all 0.3s; z-index: 1000; }
+    .main-content { margin-left: var(--sidebar-width); padding: 40px; }
+    .table-container { background: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    .badge-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .badge-approved { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .stat-card { border: none; border-radius: 12px; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-5px); }
   </style>
 </head>
 <body>
 
 <div class="sidebar d-flex flex-column p-3">
-  <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
-    <i class="bi bi-briefcase-fill me-2 fs-4 text-warning"></i>
-    <span class="fs-4 fw-bold">ADMIN PANEL</span>
-  </a>
-  <hr>
+  <div class="d-flex align-items-center mb-4 px-2">
+    <i class="bi bi-shield-lock-fill text-warning fs-3 me-2"></i>
+    <span class="fs-4 fw-bold">ADMIN MODE</span>
+  </div>
+  <hr class="text-secondary">
   <ul class="nav nav-pills flex-column mb-auto">
     <li class="nav-item">
-      <a href="/admin/dashboard" class="nav-link active bg-warning text-dark fw-bold">
-        <i class="bi bi-speedometer2 me-2"></i> Вакансии
+      <a href="/admin/dashboard" class="nav-link active bg-warning text-dark fw-bold mb-2">
+        <i class="bi bi-list-check me-2"></i> Модерация
+      </a>
+    </li>
+    <li>
+      <a href="#" class="nav-link text-white-50">
+        <i class="bi bi-people me-2"></i> Пользователи
       </a>
     </li>
   </ul>
-  <hr>
+  <hr class="text-secondary">
   <form th:action="@{/logout}" method="post">
-    <button class="btn btn-outline-danger w-100 btn-sm">Выйти</button>
+    <button class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center">
+      <i class="bi bi-box-arrow-left me-2"></i> Выйти
+    </button>
   </form>
 </div>
 
 <div class="main-content">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold">Управление стажировками</h2>
-    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addInternshipModal">
-      <i class="bi bi-plus-lg me-1"></i> Добавить вакансию
-    </button>
+  <div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+      <h1 class="fw-bold mb-1">Управление контентом</h1>
+      <p class="text-muted">Проверяйте новые заявки от компаний перед публикацией</p>
+    </div>
+    <div class="text-end text-muted small">
+      <i class="bi bi-calendar3 me-1"></i> <span th:text="${#calendars.format(#calendars.createNow(), 'dd MMMM yyyy')}"></span>
+    </div>
   </div>
 
   <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card card-stats p-3 shadow-sm border-0">
-        <div class="text-muted small uppercase">Всего вакансий</div>
-        <div class="h3 fw-bold m-0" th:text="${allInternships.size()}">0</div>
+    <div class="col-md-4">
+      <div class="card stat-card shadow-sm p-3">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
+            <i class="bi bi-briefcase text-primary fs-4"></i>
+          </div>
+          <div>
+            <div class="text-muted small">Всего вакансий</div>
+            <div class="h4 fw-bold mb-0" th:text="${allInternships.size()}">0</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -57,111 +77,98 @@
     <table class="table table-hover align-middle">
       <thead class="table-light">
       <tr>
-        <th style="width: 50px">ID</th>
-        <th>Позиция</th>
-        <th>Ло<i class="bi bi-geo-alt small"></i>кация</th>
-        <th>Статус</th>
-        <th class="text-end">Действия</th>
+        <th class="border-0">ID</th>
+        <th class="border-0">Информация о вакансии</th>
+        <th class="border-0">Город</th>
+        <th class="border-0">Статус</th>
+        <th class="border-0 text-end">Действия</th>
       </tr>
       </thead>
       <tbody>
       <tr th:each="job : ${allInternships}">
-        <td th:text="${job.id}" class="text-muted small">1</td>
+        <td th:text="${job.id}" class="text-muted fw-bold">1</td>
         <td>
-          <div th:text="${job.title}" class="fw-bold">Title</div>
-          <div class="small text-muted" th:text="${#strings.abbreviate(job.description, 50)}">Desc</div>
+          <div th:text="${job.title}" class="fw-bold text-dark mb-0">Java Dev</div>
+          <div class="text-muted small" th:text="${#strings.abbreviate(job.description, 60)}">Desc...</div>
         </td>
-        <td><span class="badge bg-light text-dark border" th:text="${job.city}">City</span></td>
         <td>
-          <span th:if="${job.status.name() == 'APPROVED'}" class="badge bg-success-subtle text-success">Одобрено</span>
-          <span th:if="${job.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning">На проверке</span>
+          <i class="bi bi-geo-alt text-danger me-1 small"></i>
+          <span th:text="${job.city}">City</span>
+        </td>
+        <td>
+                        <span th:if="${job.status.name() == 'PENDING'}" class="badge badge-pending">
+                             <i class="bi bi-hourglass-split me-1"></i> На проверке
+                        </span>
+          <span th:if="${job.status.name() == 'APPROVED'}" class="badge badge-approved">
+                            <i class="bi bi-check2-circle me-1"></i> Опубликовано
+                        </span>
         </td>
         <td class="text-end">
           <div class="d-flex justify-content-end gap-2">
 
-            <button class="btn btn-light btn-sm border" data-bs-toggle="modal" th:data-bs-target="'#editModal' + ${job.id}">
-              <i class="bi bi-pencil text-primary"></i>
-            </button>
-
-            <form th:action="@{'/admin/delete/' + ${job.id}}" method="post" onsubmit="return confirm('Удалить вакансию?')">
-              <button type="submit" class="btn btn-light btn-sm border">
-                <i class="bi bi-trash text-danger"></i>
+            <form th:if="${job.status.name() == 'PENDING'}"
+                  th:action="@{'/admin/approve/' + ${job.id}}" method="post">
+              <button type="submit" class="btn btn-success btn-sm px-3 shadow-sm">
+                <i class="bi bi-check-lg me-1"></i> Одобрить
               </button>
             </form>
 
-            <form th:if="${job.status.name() == 'PENDING'}" th:action="@{'/admin/approve/' + ${job.id}}" method="post">
-              <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i></button>
+            <button class="btn btn-outline-primary btn-sm"
+                    data-bs-toggle="modal"
+                    th:data-bs-target="'#editModal' + ${job.id}">
+              <i class="bi bi-pencil"></i>
+            </button>
+
+            <form th:action="@{'/admin/delete/' + ${job.id}}" method="post"
+                  onsubmit="return confirm('Вы уверены, что хотите удалить эту вакансию?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash"></i>
+              </button>
             </form>
           </div>
 
           <div class="modal fade" th:id="'editModal' + ${job.id}" tabindex="-1">
-            <div class="modal-dialog">
-              <div class="modal-content text-start">
-                <div class="modal-header bg-light">
-                  <h5 class="modal-title">Редактировать запись #<span th:text="${job.id}"></span></h5>
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content text-start border-0 shadow">
+                <div class="modal-header border-0 bg-light">
+                  <h5 class="modal-title fw-bold">Правка вакансии #<span th:text="${job.id}"></span></h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form th:action="@{/admin/edit}" method="post">
-                  <div class="modal-body">
+                  <div class="modal-body p-4">
                     <input type="hidden" name="id" th:value="${job.id}">
                     <div class="mb-3">
-                      <label class="form-label fw-bold small">Название вакансии</label>
+                      <label class="form-label small fw-bold">Заголовок</label>
                       <input type="text" name="title" class="form-control" th:value="${job.title}" required>
                     </div>
                     <div class="mb-3">
-                      <label class="form-label fw-bold small">Город</label>
+                      <label class="form-label small fw-bold">Город</label>
                       <input type="text" name="city" class="form-control" th:value="${job.city}" required>
                     </div>
                     <div class="mb-3">
-                      <label class="form-label fw-bold small">Описание</label>
-                      <textarea name="description" class="form-control" rows="4" th:text="${job.description}" required></textarea>
+                      <label class="form-label small fw-bold">Описание</label>
+                      <textarea name="description" class="form-control" rows="5" th:text="${job.description}" required></textarea>
                     </div>
                     <input type="hidden" name="status" th:value="${job.status}">
                   </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary px-4">Сохранить изменения</button>
+                  <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-bold text-dark">Сохранить изменения</button>
                   </div>
                 </form>
               </div>
             </div>
           </div>
-
+        </td>
+      </tr>
+      <tr th:if="${allInternships.isEmpty()}">
+        <td colspan="5" class="text-center py-5 text-muted">
+          <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+          Новых заявок пока нет.
         </td>
       </tr>
       </tbody>
     </table>
-  </div>
-</div>
-
-<div class="modal fade" id="addInternshipModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content text-start">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold">Новая стажировка</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form th:action="@{/admin/add}" method="post">
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label fw-bold small">Заголовок</label>
-            <input type="text" name="title" class="form-control" required placeholder="Напр: Golang Developer">
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-bold small">Город</label>
-            <input type="text" name="city" class="form-control" required placeholder="Напр: Астана">
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-bold small">Описание</label>
-            <textarea name="description" class="form-control" rows="4" required placeholder="Опишите требования и условия..."></textarea>
-          </div>
-        </div>
-        <div class="modal-footer border-0">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Закрыть</button>
-          <button type="submit" class="btn btn-primary px-4">Создать вакансию</button>
-        </div>
-      </form>
-    </div>
   </div>
 </div>
 

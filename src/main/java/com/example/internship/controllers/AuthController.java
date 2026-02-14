@@ -35,8 +35,7 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
         if ("COMPANY".equals(roleType)) {
-            // Если хочешь, чтобы он стал именно Админом:
-            user.setRole(Role.ADMIN);
+            user.setRole(Role.COMPANY); // Сохраняем как компанию
         } else {
             user.setRole(Role.STUDENT);
         }

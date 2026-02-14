@@ -22,11 +22,9 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/register", "/css/**").permitAll()
-
-                        // ВОТ СЮДА: разрешаем доступ к папке /admin/ и Админам, и Компаниям
-                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "COMPANY")
-
+                        .requestMatchers("/", "/login", "/register", "/css/**", "/js/**").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")    // Только для админов
+                        .requestMatchers("/company/**").hasRole("COMPANY") // Только для компаний
                         .anyRequest().authenticated()
                 )
                 .formLogin(login -> login
@@ -34,12 +32,10 @@ public class SecurityConfig {
                         .successHandler((request, response, authentication) -> {
                             var authorities = authentication.getAuthorities();
 
-                            // Проверяем наличие роли с учетом префикса
-                            boolean isAdmin = authorities.stream()
-                                    .anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"));
-
-                            if (isAdmin) {
+                            if (authorities.stream().anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"))) {
                                 response.sendRedirect("/admin/dashboard");
+                            } else if (authorities.stream().anyMatch(r -> r.getAuthority().equals("ROLE_COMPANY"))) {
+                                response.sendRedirect("/company/dashboard"); // Редирект для компании
                             } else {
                                 response.sendRedirect("/");
                             }

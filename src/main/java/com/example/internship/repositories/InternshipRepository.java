@@ -1,18 +1,14 @@
 package com.example.internship.repositories;
 
 import com.example.internship.models.Internship;
-import com.example.internship.models.InternshipStatus;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface InternshipRepository extends JpaRepository<Internship, Long> {
 
-    // Для главной страницы: загружаем только те, у которых статус APPROVED
-    List<Internship> findByStatus(InternshipStatus status);
+    // Этот метод найдет все вакансии, принадлежащие конкретной компании по её ID
+    List<Internship> findByCompanyId(Long companyId);
 
-    // Можно добавить поиск по городу для фильтров в будущем
-    List<Internship> findByCityIgnoreCase(String city);
-        @EntityGraph(attributePaths = {"company", "company.user"})
-        List<Internship> findAllByStatus(InternshipStatus status);
-    }
+    // Также нам пригодится этот метод для главной страницы (только одобренные)
+    List<Internship> findByStatus(com.example.internship.models.InternshipStatus status);
+}

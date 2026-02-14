@@ -16,12 +16,11 @@ public class Internship {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    // Оставляем только этот статус!
     @Enumerated(EnumType.STRING)
     private InternshipStatus status = InternshipStatus.PENDING;
 
     @ManyToOne
     @JoinColumn(name = "company_id")
-    private Company company; // Кто разместил вакансию
-
-    // Геттеры и сеттеры
+    private Company company;
 }

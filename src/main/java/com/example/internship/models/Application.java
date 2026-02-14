@@ -1,9 +1,10 @@
 package com.example.internship.models;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.time.LocalDateTime;
-
+@Data
 @Entity
 public class Application {
     @Id

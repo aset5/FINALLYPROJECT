@@ -19,7 +19,7 @@ public class DataLoader {
             if (userRepository.findByUsername("admin").isEmpty()) {
                 User admin = new User();
                 admin.setUsername("admin");
-                admin.setPassword(passwordEncoder.encode("admin"));
+                admin.setPassword(passwordEncoder.encode("1234"));
                 admin.setRole(Role.ADMIN);
                 userRepository.save(admin);
                 System.out.println("--- Аккаунт администратора создан (admin/admin) ---");

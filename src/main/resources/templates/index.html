@@ -4,75 +4,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Портал Стажировок</title>
+    <title>Портал Стажировок | Главная</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        .card { transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); }
+        :root { --primary-color: #0d6efd; }
+        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
+        .navbar { background-color: #1a1d20 !important; }
+        .card-job { border: none; border-radius: 15px; transition: all 0.3s ease; height: 100%; }
+        .card-job:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.1) !important; }
+        .badge-city { background-color: #e7f1ff; color: #0d6efd; font-weight: 600; }
+        .hero-section { background: linear-gradient(135deg, #1a1d20 0%, #343a40 100%); color: white; padding: 60px 0; margin-bottom: 40px; }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-5">
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">
-            <i class="bi bi-briefcase-fill me-2"></i>INTERN.PRO
+            <i class="bi bi-rocket-takeoff-fill text-warning me-2"></i>INTERN.PRO
         </a>
 
-        <div class="d-flex align-items-center">
-            <div sec:authorize="isAnonymous()">
-                <a th:href="@{/login}" class="btn btn-outline-light btn-sm me-2">Войти</a>
-                <a th:href="@{/register}" class="btn btn-warning btn-sm fw-bold">Регистрация</a>
-            </div>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-            <div sec:authorize="isAuthenticated()" class="d-flex align-items-center">
-                <a sec:authorize="hasAuthority('ADMIN')" th:href="@{/admin/dashboard}"
-                   class="btn btn-danger btn-sm me-3">
-                    <i class="bi bi-speedometer2 me-1"></i> Админ-панель
-                </a>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item" sec:authorize="isAnonymous()">
+                    <a th:href="@{/login}" class="btn btn-outline-light btn-sm me-2 px-3">Войти</a>
+                </li>
+                <li class="nav-item" sec:authorize="isAnonymous()">
+                    <a th:href="@{/register}" class="btn btn-warning btn-sm fw-bold px-3">Регистрация</a>
+                </li>
 
-                <span class="text-light me-3 small">
-                    Привет, <span th:text="${#authentication.name}" class="fw-bold text-warning">User</span>!
-                </span>
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <div class="d-flex align-items-center">
+                        <a sec:authorize="hasRole('STUDENT')" th:href="@{/student/my-applications}" class="btn btn-outline-info btn-sm me-3">
+                            <i class="bi bi-file-earmark-person me-1"></i> Мои отклики
+                        </a>
 
-                <form th:action="@{/logout}" method="post" class="m-0">
-                    <button type="submit" class="btn btn-outline-danger btn-sm">Выйти</button>
-                </form>
-            </div>
+                        <a sec:authorize="hasRole('COMPANY')" th:href="@{/company/dashboard}" class="btn btn-outline-primary btn-sm me-3">
+                            <i class="bi bi-building me-1"></i> Кабинет компании
+                        </a>
+
+                        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/dashboard}" class="btn btn-danger btn-sm me-3">
+                            <i class="bi bi-shield-lock me-1"></i> Админ-центр
+                        </a>
+
+                        <span class="text-light-50 me-3 small">
+                            Привет, <span th:text="${#authentication.name}" class="text-warning fw-bold">User</span>
+                        </span>
+
+                        <form th:action="@{/logout}" method="post" class="m-0">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Выйти</button>
+                        </form>
+                    </div>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>
 
+<div class="hero-section text-center">
+    <div class="container">
+        <h1 class="display-4 fw-bold">Найди стажировку мечты</h1>
+        <p class="lead opacity-75">Лучшие компании ищут талантливых студентов именно здесь.</p>
+    </div>
+</div>
+
 <div class="container">
+    <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>Успешно!</strong> Ваш отклик был отправлен работодателю.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Ошибка!</strong> Похоже, эта вакансия больше недоступна. Попробуйте обновить страницу.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
     <div class="row mb-4">
         <div class="col">
-            <h2 class="fw-light">Доступные предложения</h2>
-            <hr class="w-25">
+            <h3 class="fw-bold"><i class="bi bi-stars text-warning me-2"></i>Актуальные предложения</h3>
         </div>
     </div>
 
-    <div class="row row-cols-1 row-cols-md-3 g-4">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         <div class="col" th:each="job : ${internships}">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title mb-0" th:text="${job.title}">Заголовок</h5>
-                        <span class="badge bg-info text-dark" th:text="${job.city}">Город</span>
+            <div class="card card-job shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <span class="badge badge-city rounded-pill px-3 py-2">
+                            <i class="bi bi-geo-alt-fill me-1"></i> <span th:text="${job.city}">Город</span>
+                        </span>
+                        <small class="text-muted"><i class="bi bi-clock me-1"></i> Новая</small>
                     </div>
-                    <p class="card-text text-muted small" th:text="${job.description}">Описание вакансии...</p>
+
+                    <h5 class="card-title fw-bold text-dark mb-3" th:text="${job.title}">Заголовок вакансии</h5>
+                    <p class="card-text text-secondary mb-4" th:text="${#strings.abbreviate(job.description, 120)}">
+                        Краткое описание вакансии будет здесь...
+                    </p>
                 </div>
-                <div class="card-footer bg-transparent border-top-0 pb-3">
-                    <button class="btn btn-primary w-100 btn-sm">Подать заявку</button>
+
+                <div class="card-footer bg-white border-0 p-4 pt-0">
+                    <div sec:authorize="hasRole('STUDENT')">
+                        <form th:action="@{'/student/apply/' + ${job.id}}" method="post">
+                            <button type="submit" class="btn btn-primary w-100 fw-bold">
+                                Подать отклик <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div sec:authorize="isAnonymous()">
+                        <a th:href="@{/login}" class="btn btn-outline-primary w-100 fw-bold">
+                            Войти для отклика
+                        </a>
+                    </div>
+
+                    <div sec:authorize="hasAnyRole('ADMIN', 'COMPANY')">
+                        <button class="btn btn-light w-100 text-muted" disabled>
+                            Только для студентов
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+
         <div class="col-12 text-center py-5" th:if="${#lists.isEmpty(internships)}">
-            <i class="bi bi-emoji-frown display-1 text-muted"></i>
-            <p class="mt-3 text-muted">Пока нет активных стажировок. Зайдите позже!</p>
+            <div class="py-5 bg-white rounded-4 shadow-sm">
+                <i class="bi bi-search display-1 text-muted opacity-25"></i>
+                <p class="mt-4 text-muted fs-5">Пока нет активных стажировок. Попробуйте обновить страницу позже.</p>
+            </div>
         </div>
     </div>
 </div>
+
+<footer class="mt-5 py-4 border-top bg-white">
+    <div class="container text-center text-muted small">
+        &copy; 2026 INTERN.PRO — Платформа для будущих профи
+    </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

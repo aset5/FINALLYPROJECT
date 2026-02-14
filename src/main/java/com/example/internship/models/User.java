@@ -21,5 +21,8 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role; // STUDENT, COMPANY, ADMIN
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Company company;
+
     // Геттеры и сеттеры
 }
