@@ -146,4 +146,45 @@ public class CompanyController {
         internshipRepository.save(internship);
         return "redirect:/company/dashboard";
     }
+
+    @GetMapping("/internships/edit/{id}")
+    public String editInternshipPage(@PathVariable Long id, Model model, Principal principal) {
+        Internship internship = internshipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
+
+        // Проверка прав (редактировать может только владелец)
+        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
+            throw new AccessDeniedException("Вы не можете редактировать чужую вакансию!");
+        }
+
+        model.addAttribute("internship", internship);
+        return "company/edit-internship";
+    }
+
+    @PostMapping("/internships/edit/{id}")
+    public String updateInternship(@PathVariable Long id,
+                                   @ModelAttribute("internship") Internship updatedData,
+                                   Principal principal) {
+        Internship internship = internshipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
+
+        // Проверка прав доступа
+        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
+            throw new AccessDeniedException("Доступ запрещен");
+        }
+
+        // Обновляем поля
+        internship.setTitle(updatedData.getTitle());
+        internship.setCity(updatedData.getCity());
+        internship.setDescription(updatedData.getDescription());
+
+        // ГЛАВНОЕ: Сбрасываем статус на PENDING при любом изменении
+        // Теперь вакансия исчезнет из общего списка у студентов и попадет в админку
+        internship.setStatus(InternshipStatus.PENDING);
+
+        internshipRepository.save(internship);
+
+        // Можно добавить сообщение для пользователя, что вакансия ушла на модерацию
+        return "redirect:/company/dashboard?msg=remoderation";
+    }
 }

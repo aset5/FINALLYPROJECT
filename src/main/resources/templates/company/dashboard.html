@@ -36,6 +36,12 @@
 </nav>
 
 <div class="container">
+    <div th:if="${param.msg != null and param.msg[0] == 'remoderation'}"
+         class="alert alert-info alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert">
+        <i class="bi bi-shield-check me-2"></i>
+        Изменения сохранены. Вакансия отправлена на <strong>повторную модерацию</strong>.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold"><i class="bi bi-collection me-2 text-primary"></i>Мои стажировки</h2>
@@ -47,13 +53,13 @@
     <div class="row mb-5 text-center">
         <div class="col-md-3">
             <div class="card card-custom p-4 bg-white shadow-sm border-start border-primary border-4">
-                <div class="text-muted small fw-bold">Всего публикаций</div>
+                <div class="text-muted small fw-bold text-uppercase">Публикации</div>
                 <div class="h2 fw-bold mb-0" th:text="${myInternships.size()}">0</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-custom p-4 bg-white shadow-sm border-start border-info border-4">
-                <div class="text-muted small fw-bold">Получено откликов</div>
+                <div class="text-muted small fw-bold text-uppercase">Отклики</div>
                 <div class="h2 fw-bold mb-0" th:text="${candidates != null ? candidates.size() : 0}">0</div>
             </div>
         </div>
@@ -75,10 +81,10 @@
             <tbody>
             <tr th:each="job : ${myInternships}">
                 <td class="ps-4">
-                    <div class="fw-bold text-dark" th:text="${job.title}">Java Developer</div>
+                    <div class="fw-bold text-dark" th:text="${job.title}">Position</div>
                     <div class="small text-muted" th:text="${#strings.abbreviate(job.description, 60)}">Desc</div>
                 </td>
-                <td><i class="bi bi-geo-alt me-1"></i><span th:text="${job.city}">Almaty</span></td>
+                <td><i class="bi bi-geo-alt me-1"></i><span th:text="${job.city}">City</span></td>
                 <td>
                     <span th:if="${job.status.name() == 'APPROVED'}" class="badge bg-success-subtle text-success status-badge border border-success">
                         <i class="bi bi-check-circle me-1"></i> Опубликовано
@@ -87,25 +93,32 @@
                         <i class="bi bi-clock-history me-1"></i> На модерации
                     </span>
                     <span th:if="${job.status.name() == 'CLOSED'}" class="badge bg-secondary-subtle text-secondary status-badge border border-secondary">
-                        <i class="bi bi-archive me-1"></i> Закрыта
+                        <i class="bi bi-archive me-1"></i> Архив
+                    </span>
+                    <span th:if="${job.status.name() == 'REJECTED'}" class="badge bg-danger-subtle text-danger status-badge border border-danger">
+                        <i class="bi bi-x-circle me-1"></i> Отклонена
                     </span>
                 </td>
                 <td class="text-end pe-4">
                     <div class="d-inline-flex gap-2">
-                        <form th:if="${job.status.name() == 'APPROVED'}" th:action="@{'/company/internships/' + ${job.id} + '/close'}" method="post">
-                            <button type="submit" class="btn btn-sm btn-outline-warning">
-                                <i class="bi bi-archive me-1"></i>Закрыть
+                        <a th:href="@{'/company/internships/edit/' + ${job.id}}" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        <form th:if="${job.status.name() == 'APPROVED'}" th:action="@{'/company/internships/' + ${job.id} + '/close'}" method="post" class="m-0">
+                            <button type="submit" class="btn btn-sm btn-outline-warning" title="В архив">
+                                <i class="bi bi-archive"></i>
                             </button>
                         </form>
 
-                        <form th:if="${job.status.name() == 'CLOSED'}" th:action="@{'/company/internships/' + ${job.id} + '/reopen'}" method="post">
-                            <button type="submit" class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i>Открыть
+                        <form th:if="${job.status.name() == 'CLOSED'}" th:action="@{'/company/internships/' + ${job.id} + '/reopen'}" method="post" class="m-0">
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Вернуть из архива">
+                                <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
                         </form>
 
-                        <form th:action="@{'/company/delete/' + ${job.id}}" method="post" class="d-inline"
-                              onsubmit="return confirm('Вы уверены, что хотите удалить вакансию навсегда?')">
+                        <form th:action="@{'/company/delete/' + ${job.id}}" method="post" class="m-0"
+                              onsubmit="return confirm('Удалить вакансию навсегда?')">
                             <button type="submit" class="btn btn-sm btn-outline-danger">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -114,7 +127,7 @@
                 </td>
             </tr>
             <tr th:if="${myInternships.isEmpty()}">
-                <td colspan="4" class="text-center py-4 text-muted">Список вакансий пуст</td>
+                <td colspan="4" class="text-center py-5 text-muted">Список вакансий пуст.</td>
             </tr>
             </tbody>
         </table>
@@ -140,13 +153,13 @@
                     <div class="d-flex align-items-center">
                         <div class="student-initials me-3" th:text="${#strings.substring(app.student.username,0,1).toUpperCase()}">U</div>
                         <div class="text-start">
-                            <div class="fw-bold text-dark" th:text="${app.student.username}">Student Name</div>
+                            <div class="fw-bold text-dark" th:text="${app.student.username}">Student</div>
                             <div class="small text-muted">Кандидат</div>
                         </div>
                     </div>
                 </td>
                 <td>
-                    <span class="badge bg-light text-dark border fw-normal" th:text="${app.internship.title}">Java Dev</span>
+                    <span class="badge bg-light text-dark border fw-normal" th:text="${app.internship.title}">Job</span>
                 </td>
                 <td class="text-muted small">
                     <i class="bi bi-calendar-event me-1"></i>
@@ -156,28 +169,28 @@
                     <div class="d-inline-flex gap-2 align-items-center">
                         <div th:if="${app.status == null || app.status.name() == 'PENDING'}" class="d-inline-flex gap-2">
                             <form th:action="@{'/company/applications/' + ${app.id} + '/accept'}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-success">Принять</button>
+                                <button type="submit" class="btn btn-sm btn-success shadow-sm">Одобрить</button>
                             </form>
                             <form th:action="@{'/company/applications/' + ${app.id} + '/reject'}" method="post" class="m-0">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">Отказать</button>
                             </form>
                         </div>
 
-                        <span th:if="${app.status != null && app.status.name() == 'ACCEPTED'}" class="badge bg-success px-3 py-2 rounded-pill">
+                        <span th:if="${app.status != null && app.status.name() == 'ACCEPTED'}" class="badge bg-success px-3 py-2 rounded-pill shadow-sm">
                              <i class="bi bi-person-check me-1"></i> Одобрен
                         </span>
-                        <span th:if="${app.status != null && app.status.name() == 'REJECTED'}" class="badge bg-secondary px-3 py-2 rounded-pill">
+                        <span th:if="${app.status != null && app.status.name() == 'REJECTED'}" class="badge bg-secondary px-3 py-2 rounded-pill shadow-sm">
                              <i class="bi bi-person-x me-1"></i> Отклонен
                         </span>
 
-                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info" title="Профиль">
+                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info ms-2" title="Профиль">
                             <i class="bi bi-file-earmark-person"></i>
                         </a>
                     </div>
                 </td>
             </tr>
             <tr th:if="${candidates == null || candidates.isEmpty()}">
-                <td colspan="4" class="text-center py-4 text-muted">Новых откликов пока нет</td>
+                <td colspan="4" class="text-center py-5 text-muted">Новых откликов пока нет.</td>
             </tr>
             </tbody>
         </table>
@@ -203,7 +216,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Описание стажировки</label>
-                        <textarea name="description" class="form-control" rows="5" required placeholder="Требования и условия..."></textarea>
+                        <textarea name="description" class="form-control" rows="5" required placeholder="Требования, условия..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0">
