@@ -14,6 +14,7 @@
         .status-badge { font-size: 0.8rem; padding: 0.5em 1em; border-radius: 20px; }
         .table-header { background-color: #f1f3f5; font-weight: 600; color: #495057; }
         .student-initials { width: 40px; height: 40px; background: #e7f1ff; color: #0d6efd; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; }
+        .tg-alert { border-left: 4px solid #0088cc; background: #e1f5fe; }
     </style>
 </head>
 <body>
@@ -36,6 +37,16 @@
 </nav>
 
 <div class="container">
+    <div th:if="${user != null and user.telegramChatId == null}" class="alert alert-info tg-alert border-0 shadow-sm d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <i class="bi bi-telegram me-2 text-primary h4 mb-0"></i>
+            <strong>Включите Telegram-уведомления!</strong> Чтобы мгновенно узнавать о новых сообщениях от студентов.
+        </div>
+        <a th:href="'https://t.me/intern_pro_kz_bot?start=user_' + ${user.id}" target="_blank" class="btn btn-primary btn-sm rounded-pill px-4">
+            Подключить бот
+        </a>
+    </div>
+
     <div th:if="${param.msg != null and param.msg[0] == 'remoderation'}"
          class="alert alert-info alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert">
         <i class="bi bi-shield-check me-2"></i>
@@ -61,6 +72,15 @@
             <div class="card card-custom p-4 bg-white shadow-sm border-start border-info border-4">
                 <div class="text-muted small fw-bold text-uppercase">Отклики</div>
                 <div class="h2 fw-bold mb-0" th:text="${candidates != null ? candidates.size() : 0}">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom p-4 bg-white shadow-sm border-start border-success border-4">
+                <div class="text-muted small fw-bold text-uppercase">Бот</div>
+                <div class="h5 fw-bold mb-0 mt-2">
+                    <span th:if="${user != null and user.telegramChatId != null}" class="text-success"><i class="bi bi-check-all"></i> Активен</span>
+                    <span th:if="${user == null or user.telegramChatId == null}" class="text-muted small">Не привязан</span>
+                </div>
             </div>
         </div>
     </div>

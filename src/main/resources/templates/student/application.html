@@ -20,7 +20,6 @@
             display: inline-block;
             text-transform: uppercase;
         }
-        /* Стили для статуса самого отклика (решение компании) */
         .app-status-pending { background-color: #e9ecef; color: #495057; }
         .app-status-accepted { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .app-status-rejected { background-color: #f8d7da; color: #842029; }
@@ -37,6 +36,13 @@
             background-color: #0b5ed7;
             color: white;
             transform: scale(1.05);
+        }
+        .btn-locked {
+            background-color: #dee2e6;
+            color: #6c757d;
+            cursor: not-allowed;
+            border-radius: 8px;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -106,10 +112,22 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <a th:href="@{'/student/messages/' + ${app.internship.id}}"
-                                   class="btn btn-sm btn-chat px-3 shadow-sm">
-                                    <i class="bi bi-chat-dots-fill me-1"></i> Чат с HR
-                                </a>
+                                <div th:if="${app.status.name() == 'ACCEPTED'}">
+                                    <a th:href="@{'/student/messages/' + ${app.internship.id}}"
+                                       class="btn btn-sm btn-chat px-3 shadow-sm">
+                                        <i class="bi bi-chat-dots-fill me-1"></i> Чат с HR
+                                    </a>
+                                </div>
+
+                                <div th:if="${app.status.name() == 'PENDING'}">
+                                    <button class="btn btn-sm btn-locked px-3" title="Чат будет доступен после одобрения">
+                                        <i class="bi bi-lock-fill me-1"></i> Чат закрыт
+                                    </button>
+                                </div>
+
+                                <div th:if="${app.status.name() == 'REJECTED'}">
+                                    <span class="text-muted small">Недоступно</span>
+                                </div>
                             </td>
                         </tr>
                         </tbody>

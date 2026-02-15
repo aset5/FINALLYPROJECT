@@ -58,7 +58,6 @@ public class StudentController {
         app.setAppliedAt(LocalDateTime.now());
         applicationRepository.save(app);
 
-        // Уведомление HR о новом отклике
         User hr = internship.getCompany().getUser();
         if (hr.getTelegramChatId() != null) {
             telegramBotService.sendNotification(hr.getTelegramChatId(),
@@ -73,8 +72,17 @@ public class StudentController {
     public String chatPage(@PathVariable Long internshipId, Model model, Principal principal) {
         User me = userRepository.findByUsername(principal.getName()).orElseThrow();
         Internship internship = internshipRepository.findById(internshipId).orElseThrow();
-        User companyUser = internship.getCompany().getUser();
 
+        // ПРОВЕРКА: Одобрена ли заявка этого студента на эту стажировку?
+        boolean isAccepted = applicationRepository.findByStudent(me).stream()
+                .anyMatch(app -> app.getInternship().getId().equals(internshipId)
+                        && app.getStatus() == ApplicationStatus.ACCEPTED);
+
+        if (!isAccepted) {
+            return "redirect:/student/my-applications?error=not_accepted";
+        }
+
+        User companyUser = internship.getCompany().getUser();
         List<Message> history = messageRepository.findByInternshipIdAndSenderIdAndReceiverIdOrInternshipIdAndSenderIdAndReceiverIdOrderBySentAtAsc(
                 internshipId, me.getId(), companyUser.getId(),
                 internshipId, companyUser.getId(), me.getId()
@@ -86,8 +94,12 @@ public class StudentController {
         return "student/chat";
     }
 
+    // ОСТАВИЛИ ТОЛЬКО ОДИН МЕТОД SEND MESSAGE
     @PostMapping("/messages/send")
-    public String sendMessage(@RequestParam Long internshipId, @RequestParam Long receiverId, @RequestParam String content, Principal principal) {
+    public String sendMessageFromStudent(@RequestParam Long internshipId,
+                                         @RequestParam Long receiverId,
+                                         @RequestParam String content,
+                                         Principal principal) {
         User me = userRepository.findByUsername(principal.getName()).orElseThrow();
         User receiver = userRepository.findById(receiverId).orElseThrow();
         Internship internship = internshipRepository.findById(internshipId).orElseThrow();
@@ -101,8 +113,10 @@ public class StudentController {
         messageRepository.save(msg);
 
         if (receiver.getTelegramChatId() != null) {
-            telegramBotService.sendNotification(receiver.getTelegramChatId(),
-                    "✉️ Студент " + me.getUsername() + " ответил по вакансии \"" + internship.getTitle() + "\":\n" + content);
+            String notifyText = "🎓 Новый вопрос от студента " + me.getUsername() +
+                    " по вакансии \"" + internship.getTitle() + "\":\n\n" + content;
+
+            telegramBotService.sendNotification(receiver.getTelegramChatId(), notifyText);
         }
 
         return "redirect:/student/messages/" + internshipId;

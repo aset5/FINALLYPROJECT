@@ -44,6 +44,9 @@ public class CompanyController {
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // ДОБАВЬ ЭТУ СТРОКУ, чтобы кнопка Telegram работала
+        model.addAttribute("user", user);
+
         Company company = companyRepository.findByUserId(user.getId());
         if (company == null) {
             model.addAttribute("myInternships", Collections.emptyList());
@@ -53,6 +56,7 @@ public class CompanyController {
 
         model.addAttribute("myInternships", internshipRepository.findByCompanyId(company.getId()));
         model.addAttribute("candidates", applicationRepository.findByInternshipCompanyId(company.getId()));
+
         return "company/dashboard";
     }
 
