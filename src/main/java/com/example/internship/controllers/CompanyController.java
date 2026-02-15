@@ -1,9 +1,6 @@
 package com.example.internship.controllers;
 
-import com.example.internship.models.Company;
-import com.example.internship.models.Internship;
-import com.example.internship.models.InternshipStatus;
-import com.example.internship.models.User;
+import com.example.internship.models.*;
 import com.example.internship.repositories.ApplicationRepository;
 import com.example.internship.repositories.CompanyRepository;
 import com.example.internship.repositories.InternshipRepository;
@@ -101,5 +98,21 @@ public class CompanyController {
                 .orElseThrow(() -> new RuntimeException("Студент не найден"));
         model.addAttribute("student", student);
         return "company/student-view";
+    }
+
+    @PostMapping("/applications/{id}/accept") // Адрес: /company/applications/ID/accept
+    public String acceptApplication(@PathVariable Long id) {
+        Application app = applicationRepository.findById(id).orElseThrow();
+        app.setStatus(ApplicationStatus.ACCEPTED);
+        applicationRepository.save(app);
+        return "redirect:/company/dashboard";
+    }
+
+    @PostMapping("/applications/{id}/reject")
+    public String rejectApplication(@PathVariable Long id) {
+        Application app = applicationRepository.findById(id).orElseThrow();
+        app.setStatus(ApplicationStatus.REJECTED);
+        applicationRepository.save(app);
+        return "redirect:/company/dashboard";
     }
 }

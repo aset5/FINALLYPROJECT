@@ -96,12 +96,6 @@
                     </form>
                 </td>
             </tr>
-            <tr th:if="${myInternships.isEmpty()}">
-                <td colspan="4" class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                    У вас пока нет опубликованных вакансий.
-                </td>
-            </tr>
             </tbody>
         </table>
     </div>
@@ -117,7 +111,7 @@
                 <th class="ps-4">Студент</th>
                 <th>Вакансия</th>
                 <th>Дата отклика</th>
-                <th class="text-end pe-4">Действие</th>
+                <th class="text-end pe-4">Решение / Действие</th>
             </tr>
             </thead>
             <tbody>
@@ -139,21 +133,32 @@
                     <span th:text="${#temporals.format(app.appliedAt, 'dd.MM.yyyy HH:mm')}">01.01.2026</span>
                 </td>
                 <td class="text-end pe-4">
-                    <div class="d-inline-flex gap-2">
-                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info">
-                            <i class="bi bi-file-earmark-person me-1"></i> Резюме
-                        </a>
+                    <div class="d-inline-flex gap-2 align-items-center">
 
-                        <a th:href="'mailto:' + ${app.student.username} + '@test.com'" class="btn btn-sm btn-primary">
-                            <i class="bi bi-envelope me-1"></i> Написать
+                        <div th:if="${app.status == null || app.status.name() == 'PENDING'}" class="d-inline-flex gap-2">
+                            <form th:action="@{'/company/applications/' + ${app.id} + '/accept'}" method="post" class="m-0">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="bi bi-check-lg me-1"></i>Принять
+                                </button>
+                            </form>
+                            <form th:action="@{'/company/applications/' + ${app.id} + '/reject'}" method="post" class="m-0">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-x-lg me-1"></i>Отклонить
+                                </button>
+                            </form>
+                        </div>
+
+                        <span th:if="${app.status != null && app.status.name() == 'ACCEPTED'}" class="badge bg-success px-3 py-2 rounded-pill">
+                             <i class="bi bi-person-check me-1"></i> Одобрен
+                        </span>
+                        <span th:if="${app.status != null && app.status.name() == 'REJECTED'}" class="badge bg-secondary px-3 py-2 rounded-pill">
+                             <i class="bi bi-person-x me-1"></i> Отклонен
+                        </span>
+
+                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info" title="Посмотреть резюме">
+                            <i class="bi bi-file-earmark-person"></i>
                         </a>
                     </div>
-                </td>
-            </tr>
-            <tr th:if="${candidates == null || candidates.isEmpty()}">
-                <td colspan="4" class="text-center py-5 text-muted">
-                    <i class="bi bi-person-dash fs-2 d-block mb-2"></i>
-                    На ваши вакансии пока никто не откликнулся.
                 </td>
             </tr>
             </tbody>
@@ -182,12 +187,8 @@
                         <label class="form-label small fw-bold">Описание стажировки</label>
                         <textarea name="description" class="form-control" rows="5" required placeholder="Требования, условия и стек..."></textarea>
                     </div>
-                    <div class="alert alert-info py-2 small border-0 mb-0">
-                        <i class="bi bi-info-circle me-1"></i> Вакансия появится после модерации.
-                    </div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Отмена</button>
                     <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Опубликовать</button>
                 </div>
             </form>
