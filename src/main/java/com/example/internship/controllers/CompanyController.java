@@ -196,4 +196,44 @@ public class CompanyController {
         model.addAttribute("student", student);
         return "company/student-view"; // Проблема может быть здесь
     }
+
+    @PostMapping("/internships/{id}/close")
+    public String closeInternship(@PathVariable Long id) {
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        internship.setStatus(InternshipStatus.CLOSED); // Убедись, что в Enum есть CLOSED
+        internshipRepository.save(internship);
+        return "redirect:/company/dashboard";
+    }
+
+    @PostMapping("/internships/{id}/reopen")
+    public String reopenInternship(@PathVariable Long id) {
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        internship.setStatus(InternshipStatus.APPROVED); // Возвращаем в активные
+        internshipRepository.save(internship);
+        return "redirect:/company/dashboard";
+    }
+
+    @GetMapping("/internships/edit/{id}")
+    public String editInternshipPage(@PathVariable Long id, Model model) {
+        Internship internship = internshipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
+        model.addAttribute("internship", internship);
+        return "company/edit-internship"; // Убедись, что такой HTML-файл есть
+    }
+
+    // 2. Сохранить изменения
+    @PostMapping("/internships/edit/{id}")
+    public String updateInternship(@PathVariable Long id, @ModelAttribute Internship updatedInternship) {
+        Internship existing = internshipRepository.findById(id).orElseThrow();
+
+        existing.setTitle(updatedInternship.getTitle());
+        existing.setCity(updatedInternship.getCity());
+        existing.setDescription(updatedInternship.getDescription());
+
+        // После редактирования вакансия обычно уходит на повторную модерацию
+        existing.setStatus(InternshipStatus.PENDING);
+
+        internshipRepository.save(existing);
+        return "redirect:/company/dashboard?msg=remoderation";
+    }
 }

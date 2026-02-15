@@ -1,13 +1,7 @@
 package com.example.internship.controllers;
 
-import com.example.internship.models.Company;
-import com.example.internship.models.Internship;
-import com.example.internship.models.InternshipStatus;
-import com.example.internship.models.User;
-import com.example.internship.repositories.ApplicationRepository;
-import com.example.internship.repositories.InternshipRepository;
-import com.example.internship.repositories.UserRepository;
-import com.example.internship.repositories.CompanyRepository; // 1. Добавлен импорт
+import com.example.internship.models.*;
+import com.example.internship.repositories.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -23,17 +17,20 @@ public class AdminController {
     private final InternshipRepository internshipRepository;
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
-    private final CompanyRepository companyRepository; // 2. Объявлено поле
+    private final CompanyRepository companyRepository;
+    private final MessageRepository messageRepository; // Добавлено
 
     @Autowired
     public AdminController(InternshipRepository internshipRepository,
                            UserRepository userRepository,
                            ApplicationRepository applicationRepository,
-                           CompanyRepository companyRepository) { // 3. Добавлено в конструктор
+                           CompanyRepository companyRepository,
+                           MessageRepository messageRepository) { // Добавлено
         this.internshipRepository = internshipRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
-        this.companyRepository = companyRepository; // 4. Инициализация
+        this.companyRepository = companyRepository;
+        this.messageRepository = messageRepository;
     }
 
     @GetMapping("/dashboard")
@@ -53,6 +50,8 @@ public class AdminController {
     @Transactional
     public String deleteInternship(@PathVariable Long id) {
         Internship internship = internshipRepository.findById(id).orElseThrow();
+        // Сначала удаляем сообщения и отклики, связанные с вакансией
+        messageRepository.deleteByInternship(internship);
         applicationRepository.deleteByInternship(internship);
         internshipRepository.delete(internship);
         return "redirect:/admin/dashboard";
@@ -84,22 +83,28 @@ public class AdminController {
     public String deleteUser(@PathVariable Long id) {
         User user = userRepository.findById(id).orElseThrow();
 
-        // 1. Удаляем отклики самого пользователя (если он студент)
+        // 1. Удаляем ВСЕ сообщения, где этот пользователь — отправитель или получатель
+        messageRepository.deleteBySenderIdOrReceiverId(id, id);
+
+        // 2. Удаляем отклики самого пользователя (если он студент)
         applicationRepository.deleteByStudent(user);
 
-        // 2. Проверяем, есть ли у пользователя профиль компании
+        // 3. Если это компания, чистим всё, что с ней связано
         Company company = companyRepository.findByUserId(user.getId());
-
         if (company != null) {
             List<Internship> companyJobs = internshipRepository.findByCompany(company);
             for (Internship job : companyJobs) {
+                // Удаляем сообщения и отклики по каждой вакансии компании
+                messageRepository.deleteByInternship(job);
                 applicationRepository.deleteByInternship(job);
             }
+            // Удаляем сами вакансии
             internshipRepository.deleteByCompany(company);
+            // Удаляем профиль компании
             companyRepository.delete(company);
         }
 
-        // 3. Наконец, удаляем самого пользователя
+        // 4. Теперь, когда нет никаких связей в других таблицах, удаляем пользователя
         userRepository.delete(user);
 
         return "redirect:/admin/users";
