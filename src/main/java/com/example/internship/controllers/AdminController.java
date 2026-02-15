@@ -37,8 +37,15 @@ public class AdminController {
     }
 
     @GetMapping("/dashboard")
-    public String adminDashboard(Model model) {
-        model.addAttribute("allInternships", internshipRepository.findAll());
+    public String adminDashboard(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
+        List<Internship> internships;
+        if (keyword != null && !keyword.isEmpty()) {
+            internships = internshipRepository.findByTitleContainingIgnoreCaseOrCityContainingIgnoreCase(keyword, keyword);
+            model.addAttribute("keyword", keyword);
+        } else {
+            internships = internshipRepository.findAll();
+        }
+        model.addAttribute("allInternships", internships);
         return "admin/dashboard";
     }
 
@@ -60,8 +67,15 @@ public class AdminController {
     }
 
     @GetMapping("/users")
-    public String listUsers(Model model) {
-        model.addAttribute("users", userRepository.findAll());
+    public String listUsers(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
+        List<User> users;
+        if (keyword != null && !keyword.isEmpty()) {
+            users = userRepository.findByUsernameContainingIgnoreCase(keyword);
+            model.addAttribute("keyword", keyword);
+        } else {
+            users = userRepository.findAll();
+        }
+        model.addAttribute("users", users);
         return "admin/users";
     }
 

@@ -18,4 +18,10 @@ public interface InternshipRepository extends JpaRepository<Internship, Long> {
     void deleteByCompany(Company company);
 
     List<Internship> findByStatus(InternshipStatus status);
+    List<Internship> findByStatusAndTitleContainingIgnoreCaseOrStatusAndDescriptionContainingIgnoreCase(
+            InternshipStatus status1, String title,
+            InternshipStatus status2, String description
+    );
+    List<Internship> findByTitleContainingIgnoreCaseOrCityContainingIgnoreCase(String title, String city);
+
 }

@@ -6,11 +6,40 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <style>
-    body { background-color: #f8f9fa; }
+    body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
     .navbar { background-color: #1a1d20; }
     .card { border: none; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .status-pending { color: #f39c12; font-weight: bold; font-size: 0.85rem; }
-    .status-approved { color: #27ae60; font-weight: bold; font-size: 0.85rem; }
+    .status-pending {
+      background-color: #fff4e5;
+      color: #f39c12;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .status-approved {
+      background-color: #e8f5e9;
+      color: #27ae60;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .search-box {
+      border-radius: 10px;
+      border: 1px solid #dee2e6;
+      padding-left: 40px;
+    }
+    .search-wrapper {
+      position: relative;
+    }
+    .search-wrapper i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #adb5bd;
+    }
   </style>
 </head>
 <body>
@@ -36,8 +65,25 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold m-0">Модерация вакансий</h2>
     <span class="badge bg-white text-dark shadow-sm p-2 px-3 rounded-pill text-muted">
-            <i class="bi bi-clock-history me-2"></i>Панель управления
+            <i class="bi bi-gear-fill me-2"></i>Управление контентом
         </span>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6 col-lg-5">
+      <form th:action="@{/admin/dashboard}" method="get" class="d-flex gap-2">
+        <div class="search-wrapper flex-grow-1">
+          <i class="bi bi-search"></i>
+          <input type="text" name="keyword" class="form-control search-box"
+                 placeholder="Поиск по названию или городу..."
+                 th:value="${keyword}">
+        </div>
+        <button type="submit" class="btn btn-primary px-4">Найти</button>
+        <a th:if="${keyword}" th:href="@{/admin/dashboard}" class="btn btn-light border">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </form>
+    </div>
   </div>
 
   <div class="card p-4">
@@ -48,41 +94,54 @@
           <th class="py-3">ID</th>
           <th class="py-3">Вакансия</th>
           <th class="py-3">Компания</th>
+          <th class="py-3">Город</th>
           <th class="py-3 text-center">Статус</th>
           <th class="py-3 text-end">Действия</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="job : ${allInternships}">
-          <td th:text="${job.id}">1</td>
-          <td th:text="${job.title}" class="fw-bold text-dark">Java Intern</td>
-          <td th:text="${job.company != null ? job.company.name : '—'}">Google</td>
+          <td th:text="${job.id}" class="text-muted small">1</td>
+          <td>
+            <div class="fw-bold text-dark" th:text="${job.title}">Java Intern</div>
+          </td>
+          <td>
+            <span th:text="${job.company != null ? job.company.name : '—'}">Google</span>
+          </td>
+          <td>
+            <span class="badge bg-light text-dark fw-normal" th:text="${job.city}">Москва</span>
+          </td>
           <td class="text-center">
-                            <span th:class="${job.status.name() == 'PENDING' ? 'status-pending' : 'status-approved'}"
-                                  th:text="${job.status}">PENDING</span>
+                        <span th:class="${job.status.name() == 'PENDING' ? 'status-pending' : 'status-approved'}"
+                              th:text="${job.status}">PENDING</span>
           </td>
           <td class="text-end">
-            <form th:if="${job.status.name() == 'PENDING'}"
-                  th:action="@{/admin/approve/{id}(id=${job.id})}" method="post" class="d-inline">
-              <button type="submit" class="btn btn-success btn-sm me-1 rounded-pill px-3">Одобрить</button>
-            </form>
-            <form th:action="@{/admin/delete/{id}(id=${job.id})}" method="post" class="d-inline">
-              <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle shadow-sm"
-                      onclick="return confirm('Удалить вакансию?')">
-                <i class="bi bi-trash"></i>
-              </button>
-            </form>
+            <div class="d-flex justify-content-end gap-2">
+              <form th:if="${job.status.name() == 'PENDING'}"
+                    th:action="@{/admin/approve/{id}(id=${job.id})}" method="post">
+                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3">Одобрить</button>
+              </form>
+              <form th:action="@{/admin/delete/{id}(id=${job.id})}" method="post">
+                <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle"
+                        onclick="return confirm('Удалить эту вакансию навсегда?')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
           </td>
         </tr>
         </tbody>
       </table>
+
       <div th:if="${#lists.isEmpty(allInternships)}" class="text-center py-5">
-        <i class="bi bi-inbox display-4 text-muted"></i>
-        <p class="mt-2 text-muted">Список вакансий пуст.</p>
+        <i class="bi bi-search display-4 text-muted"></i>
+        <p class="mt-3 text-muted">Вакансий по вашему запросу не найдено.</p>
+        <a th:href="@{/admin/dashboard}" class="btn btn-sm btn-link">Сбросить поиск</a>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
