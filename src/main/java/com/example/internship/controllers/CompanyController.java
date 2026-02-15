@@ -1,18 +1,16 @@
 package com.example.internship.controllers;
 
 import com.example.internship.models.*;
-import com.example.internship.repositories.ApplicationRepository;
-import com.example.internship.repositories.CompanyRepository;
-import com.example.internship.repositories.InternshipRepository;
-import com.example.internship.repositories.UserRepository;
+import com.example.internship.repositories.*;
 import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.internship.repositories.MessageRepository;
 import java.security.Principal;
 import java.util.Collections; // Импорт добавлен
+import java.util.List;
 
 @Controller
 @RequestMapping("/company")
@@ -22,15 +20,17 @@ public class CompanyController {
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
     private final CompanyRepository companyRepository;
-
+    private final MessageRepository messageRepository;
     public CompanyController(InternshipRepository internshipRepository,
                              UserRepository userRepository,
                              ApplicationRepository applicationRepository,
-                             CompanyRepository companyRepository) {
+                             CompanyRepository companyRepository,
+                             MessageRepository messageRepository) {
         this.internshipRepository = internshipRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
         this.companyRepository = companyRepository;
+        this.messageRepository = messageRepository; // 3. Присвоили
     }
 
     @GetMapping("/dashboard")
@@ -186,5 +186,40 @@ public class CompanyController {
 
         // Можно добавить сообщение для пользователя, что вакансия ушла на модерацию
         return "redirect:/company/dashboard?msg=remoderation";
+    }
+
+    @GetMapping("/messages/{internshipId}/{studentId}")
+    public String chatPage(@PathVariable Long internshipId, @PathVariable Long studentId,
+                           Model model, Principal principal) {
+        User me = userRepository.findByUsername(principal.getName()).orElseThrow();
+        User student = userRepository.findById(studentId).orElseThrow();
+
+        // Получаем сообщения только этой переписки
+        List<Message> history = messageRepository.findByInternshipIdAndSenderIdAndReceiverIdOrInternshipIdAndSenderIdAndReceiverIdOrderBySentAtAsc(
+                internshipId, me.getId(), student.getId(), // Я отправил студенту
+                internshipId, student.getId(), me.getId()  // Студент отправил мне
+        );
+
+        model.addAttribute("history", history);
+        model.addAttribute("student", student);
+        model.addAttribute("internshipId", internshipId);
+        return "company/chat";
+    }
+
+    @PostMapping("/messages/send")
+    public String sendMessage(@RequestParam Long internshipId, @RequestParam Long receiverId,
+                              @RequestParam String content, Principal principal) {
+        User me = userRepository.findByUsername(principal.getName()).orElseThrow();
+        User receiver = userRepository.findById(receiverId).orElseThrow();
+        Internship internship = internshipRepository.findById(internshipId).orElseThrow();
+
+        Message msg = new Message();
+        msg.setSender(me);
+        msg.setReceiver(receiver);
+        msg.setContent(content);
+        msg.setInternship(internship);
+
+        messageRepository.save(msg);
+        return "redirect:/company/messages/" + internshipId + "/" + receiverId;
     }
 }

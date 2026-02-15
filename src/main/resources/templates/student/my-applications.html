@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<tr th:each="app : ${applications}">
+  <td th:text="${app.internship.title}">Название вакансии</td>
+  <td>
+        <span class="badge" th:classappend="${app.status.name() == 'ACCEPTED' ? 'bg-success' : 'bg-warning'}"
+              th:text="${app.status}">Статус</span>
+  </td>
+  <td>
+    <a th:href="@{'/student/messages/' + ${app.internship.id}}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-chat-dots"></i> Написать компании
+    </a>
+  </td>
+</tr>
+</body>
+</html>

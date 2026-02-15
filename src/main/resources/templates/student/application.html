@@ -26,6 +26,18 @@
         .app-status-rejected { background-color: #f8d7da; color: #842029; }
 
         .company-name { color: #0d6efd; font-weight: 600; }
+
+        .btn-chat {
+            background-color: #0d6efd;
+            color: white;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+        .btn-chat:hover {
+            background-color: #0b5ed7;
+            color: white;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -37,6 +49,7 @@
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="/">Все вакансии</a></li>
                 <li class="nav-item"><a class="nav-link active" href="/student/my-applications">Мои отклики</a></li>
+                <li class="nav-item"><a class="nav-link" href="/student/profile">Мой профиль</a></li>
                 <li class="nav-item"><a class="nav-link text-danger" href="/logout">Выйти</a></li>
             </ul>
         </div>
@@ -65,20 +78,23 @@
                             <th>Компания</th>
                             <th>Должность</th>
                             <th>Дата отклика</th>
-                            <th>Статус вакансии</th>
-                            <th class="text-center">Решение компании</th>
+                            <th>Решение</th>
+                            <th class="text-center">Связь</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:each="app : ${myApplications}">
                             <td class="company-name" th:text="${app.internship?.company?.name}">Название</td>
-                            <td th:text="${app.internship?.title}" class="fw-bold text-dark">Java Developer</td>
+                            <td>
+                                <div class="fw-bold text-dark" th:text="${app.internship?.title}">Java Developer</div>
+                                <div class="small">
+                                    <span th:if="${app.internship.status.name() == 'APPROVED'}" class="text-success" style="font-size: 0.7rem;">● Вакансия активна</span>
+                                    <span th:if="${app.internship.status.name() == 'PENDING'}" class="text-warning" style="font-size: 0.7rem;">● На модерации</span>
+                                    <span th:if="${app.internship.status.name() == 'CLOSED'}" class="text-danger" style="font-size: 0.7rem;">● Закрыта</span>
+                                </div>
+                            </td>
                             <td th:text="${#temporals.format(app.appliedAt, 'dd.MM.yyyy HH:mm')}" class="small text-muted">Дата</td>
                             <td>
-                                <span th:if="${app.internship.status.name() == 'APPROVED'}" class="badge bg-success-subtle text-success border border-success small">Активна</span>
-                                <span th:if="${app.internship.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning border border-warning small">На модерации</span>
-                            </td>
-                            <td class="text-center">
                                 <span th:if="${app.status.name() == 'PENDING'}" class="status-badge app-status-pending">
                                     <i class="bi bi-clock me-1"></i>На рассмотрении
                                 </span>
@@ -88,6 +104,12 @@
                                 <span th:if="${app.status.name() == 'REJECTED'}" class="status-badge app-status-rejected">
                                     <i class="bi bi-x-circle me-1"></i>Отказ
                                 </span>
+                            </td>
+                            <td class="text-center">
+                                <a th:href="@{'/student/messages/' + ${app.internship.id}}"
+                                   class="btn btn-sm btn-chat px-3 shadow-sm">
+                                    <i class="bi bi-chat-dots-fill me-1"></i> Чат с HR
+                                </a>
                             </td>
                         </tr>
                         </tbody>

@@ -95,39 +95,23 @@
                     <span th:if="${job.status.name() == 'CLOSED'}" class="badge bg-secondary-subtle text-secondary status-badge border border-secondary">
                         <i class="bi bi-archive me-1"></i> Архив
                     </span>
-                    <span th:if="${job.status.name() == 'REJECTED'}" class="badge bg-danger-subtle text-danger status-badge border border-danger">
-                        <i class="bi bi-x-circle me-1"></i> Отклонена
-                    </span>
                 </td>
                 <td class="text-end pe-4">
                     <div class="d-inline-flex gap-2">
                         <a th:href="@{'/company/internships/edit/' + ${job.id}}" class="btn btn-sm btn-outline-primary" title="Редактировать">
                             <i class="bi bi-pencil"></i>
                         </a>
-
                         <form th:if="${job.status.name() == 'APPROVED'}" th:action="@{'/company/internships/' + ${job.id} + '/close'}" method="post" class="m-0">
-                            <button type="submit" class="btn btn-sm btn-outline-warning" title="В архив">
-                                <i class="bi bi-archive"></i>
-                            </button>
+                            <button type="submit" class="btn btn-sm btn-outline-warning" title="В архив"><i class="bi bi-archive"></i></button>
                         </form>
-
                         <form th:if="${job.status.name() == 'CLOSED'}" th:action="@{'/company/internships/' + ${job.id} + '/reopen'}" method="post" class="m-0">
-                            <button type="submit" class="btn btn-sm btn-outline-success" title="Вернуть из архива">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Открыть заново"><i class="bi bi-arrow-counterclockwise"></i></button>
                         </form>
-
-                        <form th:action="@{'/company/delete/' + ${job.id}}" method="post" class="m-0"
-                              onsubmit="return confirm('Удалить вакансию навсегда?')">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                        <form th:action="@{'/company/delete/' + ${job.id}}" method="post" class="m-0" onsubmit="return confirm('Удалить навсегда?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
                     </div>
                 </td>
-            </tr>
-            <tr th:if="${myInternships.isEmpty()}">
-                <td colspan="4" class="text-center py-5 text-muted">Список вакансий пуст.</td>
             </tr>
             </tbody>
         </table>
@@ -144,7 +128,7 @@
                 <th class="ps-4">Студент</th>
                 <th>Вакансия</th>
                 <th>Дата отклика</th>
-                <th class="text-end pe-4">Решение / Действие</th>
+                <th class="text-end pe-4">Решение / Связь</th>
             </tr>
             </thead>
             <tbody>
@@ -167,19 +151,25 @@
                 </td>
                 <td class="text-end pe-4">
                     <div class="d-inline-flex gap-2 align-items-center">
+
+                        <a th:href="@{'/company/messages/' + ${app.internship.id} + '/' + ${app.student.id}}"
+                           class="btn btn-sm btn-primary shadow-sm" title="Написать сообщение">
+                            <i class="bi bi-chat-dots me-1"></i> Чат
+                        </a>
+
                         <div th:if="${app.status == null || app.status.name() == 'PENDING'}" class="d-inline-flex gap-2">
                             <form th:action="@{'/company/applications/' + ${app.id} + '/accept'}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-success shadow-sm">Одобрить</button>
+                                <button type="submit" class="btn btn-sm btn-success">Одобрить</button>
                             </form>
                             <form th:action="@{'/company/applications/' + ${app.id} + '/reject'}" method="post" class="m-0">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">Отказать</button>
                             </form>
                         </div>
 
-                        <span th:if="${app.status != null && app.status.name() == 'ACCEPTED'}" class="badge bg-success px-3 py-2 rounded-pill shadow-sm">
+                        <span th:if="${app.status != null && app.status.name() == 'ACCEPTED'}" class="badge bg-success px-3 py-2 rounded-pill">
                              <i class="bi bi-person-check me-1"></i> Одобрен
                         </span>
-                        <span th:if="${app.status != null && app.status.name() == 'REJECTED'}" class="badge bg-secondary px-3 py-2 rounded-pill shadow-sm">
+                        <span th:if="${app.status != null && app.status.name() == 'REJECTED'}" class="badge bg-secondary px-3 py-2 rounded-pill">
                              <i class="bi bi-person-x me-1"></i> Отклонен
                         </span>
 
@@ -208,15 +198,15 @@
                 <div class="modal-body p-4 text-start">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Название позиции</label>
-                        <input type="text" name="title" class="form-control" required placeholder="Напр: Junior Java Developer">
+                        <input type="text" name="title" class="form-control" required placeholder="Junior Java Developer">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Город</label>
-                        <input type="text" name="city" class="form-control" required placeholder="Напр: Алматы">
+                        <input type="text" name="city" class="form-control" required placeholder="Алматы">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Описание стажировки</label>
-                        <textarea name="description" class="form-control" rows="5" required placeholder="Требования, условия..."></textarea>
+                        <textarea name="description" class="form-control" rows="5" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0">

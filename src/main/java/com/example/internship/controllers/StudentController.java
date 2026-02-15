@@ -1,11 +1,7 @@
 package com.example.internship.controllers;
 
-import com.example.internship.models.Application;
-import com.example.internship.models.Internship;
-import com.example.internship.models.User;
-import com.example.internship.repositories.ApplicationRepository;
-import com.example.internship.repositories.InternshipRepository;
-import com.example.internship.repositories.UserRepository;
+import com.example.internship.models.*;
+import com.example.internship.repositories.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -22,13 +18,16 @@ public class StudentController {
     private final ApplicationRepository applicationRepository;
     private final UserRepository userRepository;
     private final InternshipRepository internshipRepository;
+    private final MessageRepository messageRepository; // Добавлено
 
     public StudentController(ApplicationRepository applicationRepository,
                              UserRepository userRepository,
-                             InternshipRepository internshipRepository) {
+                             InternshipRepository internshipRepository,
+                             MessageRepository messageRepository) { // Обновлено
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.internshipRepository = internshipRepository;
+        this.messageRepository = messageRepository;
     }
 
     @GetMapping("/my-applications")
@@ -44,24 +43,19 @@ public class StudentController {
 
     @PostMapping("/apply/{internshipId}")
     public String apply(@PathVariable Long internshipId, Principal principal, RedirectAttributes redirectAttributes) {
-        // 1. Ищем вакансию
         Internship internship = internshipRepository.findById(internshipId).orElse(null);
         if (internship == null) {
             return "redirect:/?error=not_found";
         }
 
-        // 2. Находим студента
         User student = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Студент не найден"));
 
-        // 3. ПРОВЕРКА НА ПОВТОРНЫЙ ОТКЛИК
         if (applicationRepository.existsByStudentAndInternship(student, internship)) {
-            // Используем FlashAttributes, чтобы передать сообщение об ошибке на главную страницу
             redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликались на эту вакансию!");
             return "redirect:/";
         }
 
-        // 4. Создаем отклик, если проверки пройдены
         Application app = new Application();
         app.setStudent(student);
         app.setInternship(internship);
@@ -72,6 +66,51 @@ public class StudentController {
         redirectAttributes.addFlashAttribute("successMessage", "Отклик успешно отправлен!");
         return "redirect:/?success";
     }
+
+    // --- НОВЫЕ МЕТОДЫ ДЛЯ ЧАТА ---
+
+    @GetMapping("/messages/{internshipId}")
+    public String chatPage(@PathVariable Long internshipId, Model model, Principal principal) {
+        User me = userRepository.findByUsername(principal.getName()).orElseThrow();
+        Internship internship = internshipRepository.findById(internshipId)
+                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
+
+        // Получаем пользователя компании (кому будем писать)
+        User companyUser = internship.getCompany().getUser();
+
+        // Загружаем историю переписки
+        List<Message> history = messageRepository.findByInternshipIdAndSenderIdAndReceiverIdOrInternshipIdAndSenderIdAndReceiverIdOrderBySentAtAsc(
+                internshipId, me.getId(), companyUser.getId(),
+                internshipId, companyUser.getId(), me.getId()
+        );
+
+        model.addAttribute("history", history);
+        model.addAttribute("companyUser", companyUser);
+        model.addAttribute("internshipId", internshipId);
+        return "student/chat"; // Создадим этот шаблон ниже
+    }
+
+    @PostMapping("/messages/send")
+    public String sendMessage(@RequestParam Long internshipId,
+                              @RequestParam Long receiverId,
+                              @RequestParam String content,
+                              Principal principal) {
+        User me = userRepository.findByUsername(principal.getName()).orElseThrow();
+        User receiver = userRepository.findById(receiverId).orElseThrow();
+        Internship internship = internshipRepository.findById(internshipId).orElseThrow();
+
+        Message msg = new Message();
+        msg.setSender(me);
+        msg.setReceiver(receiver);
+        msg.setContent(content);
+        msg.setInternship(internship);
+        msg.setSentAt(LocalDateTime.now());
+
+        messageRepository.save(msg);
+        return "redirect:/student/messages/" + internshipId;
+    }
+
+    // --- ПРОФИЛЬ ---
 
     @GetMapping("/profile")
     public String showProfile(Model model, Principal principal) {
