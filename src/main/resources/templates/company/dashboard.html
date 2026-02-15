@@ -61,7 +61,7 @@
 
     <div class="card card-custom shadow-sm overflow-hidden mb-5">
         <div class="card-header bg-white py-3">
-            <h5 class="mb-0 fw-bold">Список вакансий</h5>
+            <h5 class="mb-0 fw-bold">Управление публикациями</h5>
         </div>
         <table class="table table-hover mb-0 align-middle">
             <thead class="table-light">
@@ -86,15 +86,35 @@
                     <span th:if="${job.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning status-badge border border-warning">
                         <i class="bi bi-clock-history me-1"></i> На модерации
                     </span>
+                    <span th:if="${job.status.name() == 'CLOSED'}" class="badge bg-secondary-subtle text-secondary status-badge border border-secondary">
+                        <i class="bi bi-archive me-1"></i> Закрыта
+                    </span>
                 </td>
                 <td class="text-end pe-4">
-                    <form th:action="@{'/company/delete/' + ${job.id}}" method="post" class="d-inline"
-                          onsubmit="return confirm('Вы уверены, что хотите удалить эту вакансию?')">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-trash me-1"></i> Удалить
-                        </button>
-                    </form>
+                    <div class="d-inline-flex gap-2">
+                        <form th:if="${job.status.name() == 'APPROVED'}" th:action="@{'/company/internships/' + ${job.id} + '/close'}" method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-archive me-1"></i>Закрыть
+                            </button>
+                        </form>
+
+                        <form th:if="${job.status.name() == 'CLOSED'}" th:action="@{'/company/internships/' + ${job.id} + '/reopen'}" method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Открыть
+                            </button>
+                        </form>
+
+                        <form th:action="@{'/company/delete/' + ${job.id}}" method="post" class="d-inline"
+                              onsubmit="return confirm('Вы уверены, что хотите удалить вакансию навсегда?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
                 </td>
+            </tr>
+            <tr th:if="${myInternships.isEmpty()}">
+                <td colspan="4" class="text-center py-4 text-muted">Список вакансий пуст</td>
             </tr>
             </tbody>
         </table>
@@ -121,7 +141,7 @@
                         <div class="student-initials me-3" th:text="${#strings.substring(app.student.username,0,1).toUpperCase()}">U</div>
                         <div class="text-start">
                             <div class="fw-bold text-dark" th:text="${app.student.username}">Student Name</div>
-                            <div class="small text-muted">Студент INTERN.PRO</div>
+                            <div class="small text-muted">Кандидат</div>
                         </div>
                     </div>
                 </td>
@@ -130,21 +150,16 @@
                 </td>
                 <td class="text-muted small">
                     <i class="bi bi-calendar-event me-1"></i>
-                    <span th:text="${#temporals.format(app.appliedAt, 'dd.MM.yyyy HH:mm')}">01.01.2026</span>
+                    <span th:text="${#temporals.format(app.appliedAt, 'dd.MM.yyyy HH:mm')}">Date</span>
                 </td>
                 <td class="text-end pe-4">
                     <div class="d-inline-flex gap-2 align-items-center">
-
                         <div th:if="${app.status == null || app.status.name() == 'PENDING'}" class="d-inline-flex gap-2">
                             <form th:action="@{'/company/applications/' + ${app.id} + '/accept'}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-success">
-                                    <i class="bi bi-check-lg me-1"></i>Принять
-                                </button>
+                                <button type="submit" class="btn btn-sm btn-success">Принять</button>
                             </form>
                             <form th:action="@{'/company/applications/' + ${app.id} + '/reject'}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-x-lg me-1"></i>Отклонить
-                                </button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Отказать</button>
                             </form>
                         </div>
 
@@ -155,11 +170,14 @@
                              <i class="bi bi-person-x me-1"></i> Отклонен
                         </span>
 
-                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info" title="Посмотреть резюме">
+                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info" title="Профиль">
                             <i class="bi bi-file-earmark-person"></i>
                         </a>
                     </div>
                 </td>
+            </tr>
+            <tr th:if="${candidates == null || candidates.isEmpty()}">
+                <td colspan="4" class="text-center py-4 text-muted">Новых откликов пока нет</td>
             </tr>
             </tbody>
         </table>
@@ -185,7 +203,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Описание стажировки</label>
-                        <textarea name="description" class="form-control" rows="5" required placeholder="Требования, условия и стек..."></textarea>
+                        <textarea name="description" class="form-control" rows="5" required placeholder="Требования и условия..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0">

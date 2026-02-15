@@ -5,7 +5,7 @@ import jakarta.persistence.Enumerated;
 
 public enum InternshipStatus {
 
-    PENDING, APPROVED, REJECTED;
+    PENDING, APPROVED, REJECTED, CLOSED ;
 
     @Enumerated(EnumType.STRING)
     private ApplicationStatus status = ApplicationStatus.PENDING;

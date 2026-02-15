@@ -6,6 +6,7 @@ import com.example.internship.repositories.CompanyRepository;
 import com.example.internship.repositories.InternshipRepository;
 import com.example.internship.repositories.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -113,6 +114,36 @@ public class CompanyController {
         Application app = applicationRepository.findById(id).orElseThrow();
         app.setStatus(ApplicationStatus.REJECTED);
         applicationRepository.save(app);
+        return "redirect:/company/dashboard";
+    }
+
+    @PostMapping("/internships/{id}/close")
+    public String closeInternship(@PathVariable Long id, Principal principal) {
+        Internship internship = internshipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
+
+        // Проверка прав доступа
+        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
+            throw new AccessDeniedException("Вы не можете закрыть чужую вакансию!");
+        }
+
+        internship.setStatus(InternshipStatus.CLOSED);
+        internshipRepository.save(internship);
+        return "redirect:/company/dashboard";
+    }
+
+    @PostMapping("/internships/{id}/reopen")
+    public String reopenInternship(@PathVariable Long id, Principal principal) {
+        Internship internship = internshipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
+
+        // Проверка прав доступа
+        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
+            throw new AccessDeniedException("Вы не можете открыть чужую вакансию!");
+        }
+
+        internship.setStatus(InternshipStatus.APPROVED);
+        internshipRepository.save(internship);
         return "redirect:/company/dashboard";
     }
 }
