@@ -9,6 +9,18 @@
     body { background-color: #f4f7f6; font-family: 'Inter', sans-serif; }
     .profile-card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
     .save-btn { border-radius: 10px; padding: 12px 30px; font-weight: bold; }
+    .tg-box {
+      border: 1px dashed #0088cc;
+      background-color: #f0f9ff;
+      border-radius: 15px;
+      padding: 15px;
+    }
+    .tg-connected {
+      border: 1px solid #198754;
+      background-color: #f0fff4;
+      border-radius: 15px;
+      padding: 15px;
+    }
   </style>
 </head>
 <body>
@@ -17,7 +29,7 @@
   <div class="row justify-content-center">
     <div class="col-lg-8">
 
-      <div class="mb-4">
+      <div class="mb-4 d-flex justify-content-between align-items-center">
         <a href="/" class="text-decoration-none text-muted">
           <i class="bi bi-arrow-left me-1"></i> Вернуться на главную
         </a>
@@ -36,8 +48,35 @@
 
         <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4">
           <i class="bi bi-check-circle-fill me-2"></i> Резюме успешно обновлено!
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-bold text-dark">Уведомления в Telegram</label>
+
+          <div th:if="${user.telegramChatId == null}" class="tg-box">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+              <div>
+                <i class="bi bi-telegram text-primary me-2"></i>
+                <span class="small text-dark">Подключите бота, чтобы мгновенно получать ответы от HR</span>
+              </div>
+              <a th:href="'https://t.me/intern_pro_kz_bot?start=user_' + ${user.id}"
+                 target="_blank"
+                 class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                <i class="bi bi-plus-circle me-1"></i> Подключить
+              </a>
+            </div>
+          </div>
+
+          <div th:if="${user.telegramChatId != null}" class="tg-connected">
+            <div class="d-flex align-items-center text-success">
+              <i class="bi bi-patch-check-fill me-2"></i>
+              <span class="small fw-bold">Telegram уведомления активны</span>
+            </div>
+          </div>
+        </div>
+
+        <hr class="mb-4 opacity-10">
 
         <form th:action="@{/student/profile/update}" method="post">
           <div class="mb-4">
@@ -48,7 +87,7 @@
 
           <div class="mb-4">
             <label for="resume" class="form-label fw-bold text-dark">Текст резюме / О себе</label>
-            <textarea name="resume" id="resume" class="form-control" rows="12"
+            <textarea name="resume" id="resume" class="form-control" rows="10"
                       placeholder="Расскажите о своих навыках, проектах, образовании и технологиях, которыми владеете..."
                       th:text="${user.resume}"></textarea>
             <div class="form-text mt-2">
@@ -58,7 +97,7 @@
 
           <div class="d-grid">
             <button type="submit" class="btn btn-primary btn-lg save-btn shadow">
-              <i class="bi bi-save me-2"></i> Сохранить изменения
+              <i class="bi bi-save me-2"></i> Сохранить резюме
             </button>
           </div>
         </form>

@@ -29,4 +29,7 @@ public class User {
     public void setResume(String resume) { this.resume = resume; }
 
     // Геттеры и сеттеры
+
+    @Column(name = "telegram_chat_id")
+    private Long telegramChatId;
 }

@@ -2,14 +2,16 @@ package com.example.internship.controllers;
 
 import com.example.internship.models.*;
 import com.example.internship.repositories.*;
+import com.example.internship.services.TelegramBotService;
 import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import com.example.internship.repositories.MessageRepository;
+
 import java.security.Principal;
-import java.util.Collections; // Импорт добавлен
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Controller
@@ -21,16 +23,20 @@ public class CompanyController {
     private final ApplicationRepository applicationRepository;
     private final CompanyRepository companyRepository;
     private final MessageRepository messageRepository;
+    private final TelegramBotService telegramBotService;
+
     public CompanyController(InternshipRepository internshipRepository,
                              UserRepository userRepository,
                              ApplicationRepository applicationRepository,
                              CompanyRepository companyRepository,
-                             MessageRepository messageRepository) {
+                             MessageRepository messageRepository,
+                             TelegramBotService telegramBotService) {
         this.internshipRepository = internshipRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
         this.companyRepository = companyRepository;
-        this.messageRepository = messageRepository; // 3. Присвоили
+        this.messageRepository = messageRepository;
+        this.telegramBotService = telegramBotService;
     }
 
     @GetMapping("/dashboard")
@@ -45,10 +51,8 @@ public class CompanyController {
             return "company/dashboard";
         }
 
-        // Теперь эти методы существуют в репозиториях:
         model.addAttribute("myInternships", internshipRepository.findByCompanyId(company.getId()));
         model.addAttribute("candidates", applicationRepository.findByInternshipCompanyId(company.getId()));
-
         return "company/dashboard";
     }
 
@@ -56,11 +60,8 @@ public class CompanyController {
     public String addInternship(Internship internship, Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         Company company = companyRepository.findByUserId(user.getId());
-        if (company == null) {
-            return "redirect:/company/setup-profile?error=no_company";
-        }
+        if (company == null) return "redirect:/company/setup-profile?error=no_company";
 
         internship.setCompany(company);
         internship.setStatus(InternshipStatus.PENDING);
@@ -71,41 +72,45 @@ public class CompanyController {
     @Transactional
     @PostMapping("/delete/{id}")
     public String deleteInternship(@PathVariable Long id) {
-        // Удаляем отклики по ID вакансии (теперь метод есть в репозитории)
         applicationRepository.deleteByInternshipId(id);
-        // Удаляем вакансию
         internshipRepository.deleteById(id);
         return "redirect:/company/dashboard";
     }
 
     @GetMapping("/setup-profile")
-    public String setupProfilePage(Model model) {
-        model.addAttribute("company", new Company());
+    public String setupProfilePage(Model model, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        Company existingCompany = companyRepository.findByUserId(user.getId());
+
+        model.addAttribute("company", existingCompany != null ? existingCompany : new Company());
         return "company/setup-profile";
     }
 
     @PostMapping("/setup-profile")
-    public String saveProfile(@ModelAttribute Company company, Principal principal) {
+    public String saveProfile(@ModelAttribute("company") Company company, Principal principal) {
+        System.out.println("Начинаю сохранение профиля для: " + principal.getName());
+
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
         company.setUser(user);
         companyRepository.save(company);
+
+        System.out.println("Профиль сохранен. Делаю редирект на дашборд...");
         return "redirect:/company/dashboard";
     }
 
-    @GetMapping("/student-profile/{id}")
-    public String viewStudentProfile(@PathVariable Long id, Model model) {
-        User student = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Студент не найден"));
-        model.addAttribute("student", student);
-        return "company/student-view";
-    }
-
-    @PostMapping("/applications/{id}/accept") // Адрес: /company/applications/ID/accept
+    @PostMapping("/applications/{id}/accept")
     public String acceptApplication(@PathVariable Long id) {
         Application app = applicationRepository.findById(id).orElseThrow();
         app.setStatus(ApplicationStatus.ACCEPTED);
         applicationRepository.save(app);
+
+        // Уведомление в Telegram об одобрении
+        if (app.getStudent().getTelegramChatId() != null) {
+            telegramBotService.sendNotification(app.getStudent().getTelegramChatId(),
+                    "🎉 Поздравляем! Ваша заявка на вакансию \"" + app.getInternship().getTitle() + "\" одобрена компанией " + app.getInternship().getCompany().getName() + "!");
+        }
         return "redirect:/company/dashboard";
     }
 
@@ -117,87 +122,14 @@ public class CompanyController {
         return "redirect:/company/dashboard";
     }
 
-    @PostMapping("/internships/{id}/close")
-    public String closeInternship(@PathVariable Long id, Principal principal) {
-        Internship internship = internshipRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
-
-        // Проверка прав доступа
-        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
-            throw new AccessDeniedException("Вы не можете закрыть чужую вакансию!");
-        }
-
-        internship.setStatus(InternshipStatus.CLOSED);
-        internshipRepository.save(internship);
-        return "redirect:/company/dashboard";
-    }
-
-    @PostMapping("/internships/{id}/reopen")
-    public String reopenInternship(@PathVariable Long id, Principal principal) {
-        Internship internship = internshipRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
-
-        // Проверка прав доступа
-        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
-            throw new AccessDeniedException("Вы не можете открыть чужую вакансию!");
-        }
-
-        internship.setStatus(InternshipStatus.APPROVED);
-        internshipRepository.save(internship);
-        return "redirect:/company/dashboard";
-    }
-
-    @GetMapping("/internships/edit/{id}")
-    public String editInternshipPage(@PathVariable Long id, Model model, Principal principal) {
-        Internship internship = internshipRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
-
-        // Проверка прав (редактировать может только владелец)
-        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
-            throw new AccessDeniedException("Вы не можете редактировать чужую вакансию!");
-        }
-
-        model.addAttribute("internship", internship);
-        return "company/edit-internship";
-    }
-
-    @PostMapping("/internships/edit/{id}")
-    public String updateInternship(@PathVariable Long id,
-                                   @ModelAttribute("internship") Internship updatedData,
-                                   Principal principal) {
-        Internship internship = internshipRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
-
-        // Проверка прав доступа
-        if (!internship.getCompany().getUser().getUsername().equals(principal.getName())) {
-            throw new AccessDeniedException("Доступ запрещен");
-        }
-
-        // Обновляем поля
-        internship.setTitle(updatedData.getTitle());
-        internship.setCity(updatedData.getCity());
-        internship.setDescription(updatedData.getDescription());
-
-        // ГЛАВНОЕ: Сбрасываем статус на PENDING при любом изменении
-        // Теперь вакансия исчезнет из общего списка у студентов и попадет в админку
-        internship.setStatus(InternshipStatus.PENDING);
-
-        internshipRepository.save(internship);
-
-        // Можно добавить сообщение для пользователя, что вакансия ушла на модерацию
-        return "redirect:/company/dashboard?msg=remoderation";
-    }
-
     @GetMapping("/messages/{internshipId}/{studentId}")
-    public String chatPage(@PathVariable Long internshipId, @PathVariable Long studentId,
-                           Model model, Principal principal) {
+    public String chatPage(@PathVariable Long internshipId, @PathVariable Long studentId, Model model, Principal principal) {
         User me = userRepository.findByUsername(principal.getName()).orElseThrow();
         User student = userRepository.findById(studentId).orElseThrow();
 
-        // Получаем сообщения только этой переписки
         List<Message> history = messageRepository.findByInternshipIdAndSenderIdAndReceiverIdOrInternshipIdAndSenderIdAndReceiverIdOrderBySentAtAsc(
-                internshipId, me.getId(), student.getId(), // Я отправил студенту
-                internshipId, student.getId(), me.getId()  // Студент отправил мне
+                internshipId, me.getId(), student.getId(),
+                internshipId, student.getId(), me.getId()
         );
 
         model.addAttribute("history", history);
@@ -207,19 +139,57 @@ public class CompanyController {
     }
 
     @PostMapping("/messages/send")
-    public String sendMessage(@RequestParam Long internshipId, @RequestParam Long receiverId,
-                              @RequestParam String content, Principal principal) {
+    public String sendMessage(@RequestParam Long internshipId,
+                              @RequestParam Long receiverId,
+                              @RequestParam String content,
+                              Principal principal) {
+
+        // 1. Загружаем данные из базы
         User me = userRepository.findByUsername(principal.getName()).orElseThrow();
         User receiver = userRepository.findById(receiverId).orElseThrow();
         Internship internship = internshipRepository.findById(internshipId).orElseThrow();
 
+        // 2. Создаем и сохраняем сообщение в БД
         Message msg = new Message();
         msg.setSender(me);
         msg.setReceiver(receiver);
         msg.setContent(content);
         msg.setInternship(internship);
-
+        msg.setSentAt(LocalDateTime.now());
         messageRepository.save(msg);
+
+        // 3. ОТЛАДКА: Выводим статус в консоль IDEA
+        System.out.println("=== DEBUG TELEGRAM NOTIFICATION ===");
+        System.out.println("Отправитель: " + me.getUsername());
+        System.out.println("Получатель: " + receiver.getUsername());
+        System.out.println("Telegram Chat ID получателя: " + receiver.getTelegramChatId());
+
+        // 4. Проверка и отправка уведомления
+        if (receiver.getTelegramChatId() != null) {
+            try {
+                telegramBotService.sendNotification(receiver.getTelegramChatId(),
+                        "📩 Новое сообщение от компании " + internship.getCompany().getName() +
+                                " по вакансии \"" + internship.getTitle() + "\":\n\n" + content);
+
+                System.out.println("РЕЗУЛЬТАТ: Попытка отправить сообщение в Telegram успешна.");
+            } catch (Exception e) {
+                System.out.println("ОШИБКА: Не удалось отправить сообщение в Telegram: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("РЕЗУЛЬТАТ: Уведомление не отправлено, так как у пользователя " +
+                    receiver.getUsername() + " поле telegramChatId = null.");
+        }
+        System.out.println("====================================");
+
         return "redirect:/company/messages/" + internshipId + "/" + receiverId;
+    }
+
+    @GetMapping("/student-profile/{id}")
+    public String viewStudentProfile(@PathVariable Long id, Model model) {
+        User student = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Студент не найден"));
+        model.addAttribute("student", student);
+        return "company/student-view"; // Проблема может быть здесь
     }
 }
