@@ -54,6 +54,11 @@
                 <li class="nav-item" sec:authorize="isAnonymous()">
                     <a th:href="@{/login}" class="btn btn-outline-light btn-sm me-2 px-3">Войти</a>
                 </li>
+                <li class="nav-item" sec:authorize="hasRole('STUDENT')">
+                    <a th:href="@{/student/profile}" class="btn btn-outline-warning btn-sm me-2">
+                        <i class="bi bi-person-vcard me-1"></i>Моё резюме
+                    </a>
+                </li>
                 <li class="nav-item" sec:authorize="isAuthenticated()">
                     <div class="d-flex align-items-center text-white">
                         <a sec:authorize="hasRole('STUDENT')" th:href="@{/student/my-applications}" class="btn btn-outline-info btn-sm me-3">Мои отклики</a>

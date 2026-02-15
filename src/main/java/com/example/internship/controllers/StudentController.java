@@ -8,10 +8,7 @@ import com.example.internship.repositories.InternshipRepository;
 import com.example.internship.repositories.UserRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
@@ -68,4 +65,23 @@ public class StudentController {
 
         return "redirect:/?success";
     }
+
+    @GetMapping("/profile")
+    public String showProfile(Model model, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        model.addAttribute("user", user);
+        return "student/profile";
+    }
+
+    @PostMapping("/profile/update")
+    public String updateResume(@RequestParam("resume") String resume, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setResume(resume);
+        userRepository.save(user);
+        return "redirect:/student/profile?success";
+    }
+
+
 }

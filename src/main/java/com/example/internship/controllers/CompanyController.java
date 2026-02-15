@@ -94,4 +94,12 @@ public class CompanyController {
         companyRepository.save(company);
         return "redirect:/company/dashboard";
     }
+
+    @GetMapping("/student-profile/{id}")
+    public String viewStudentProfile(@PathVariable Long id, Model model) {
+        User student = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Студент не найден"));
+        model.addAttribute("student", student);
+        return "company/student-view";
+    }
 }

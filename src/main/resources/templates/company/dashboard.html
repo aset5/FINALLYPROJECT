@@ -44,7 +44,7 @@
         </button>
     </div>
 
-    <div class="row mb-5">
+    <div class="row mb-5 text-center">
         <div class="col-md-3">
             <div class="card card-custom p-4 bg-white shadow-sm border-start border-primary border-4">
                 <div class="text-muted small fw-bold">Всего публикаций</div>
@@ -125,23 +125,29 @@
                 <td class="ps-4">
                     <div class="d-flex align-items-center">
                         <div class="student-initials me-3" th:text="${#strings.substring(app.student.username,0,1).toUpperCase()}">U</div>
-                        <div>
-                            <div class="fw-bold" th:text="${app.student.username}">Student Name</div>
+                        <div class="text-start">
+                            <div class="fw-bold text-dark" th:text="${app.student.username}">Student Name</div>
                             <div class="small text-muted">Студент INTERN.PRO</div>
                         </div>
                     </div>
                 </td>
                 <td>
-                    <span class="badge bg-light text-dark border" th:text="${app.internship.title}">Java Dev</span>
+                    <span class="badge bg-light text-dark border fw-normal" th:text="${app.internship.title}">Java Dev</span>
                 </td>
                 <td class="text-muted small">
                     <i class="bi bi-calendar-event me-1"></i>
                     <span th:text="${#temporals.format(app.appliedAt, 'dd.MM.yyyy HH:mm')}">01.01.2026</span>
                 </td>
                 <td class="text-end pe-4">
-                    <a th:href="'mailto:' + ${app.student.username} + '@test.com'" class="btn btn-sm btn-primary">
-                        <i class="bi bi-envelope me-1"></i> Написать
-                    </a>
+                    <div class="d-inline-flex gap-2">
+                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-file-earmark-person me-1"></i> Резюме
+                        </a>
+
+                        <a th:href="'mailto:' + ${app.student.username} + '@test.com'" class="btn btn-sm btn-primary">
+                            <i class="bi bi-envelope me-1"></i> Написать
+                        </a>
+                    </div>
                 </td>
             </tr>
             <tr th:if="${candidates == null || candidates.isEmpty()}">
@@ -158,15 +164,15 @@
 <div class="modal fade" id="postJobModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header bg-primary text-white border-0">
                 <h5 class="modal-title fw-bold">Новая стажировка</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form th:action="@{/company/add}" method="post">
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 text-start">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Название позиции</label>
-                        <input type="text" name="title" class="form-control form-control-lg" required placeholder="Напр: Junior Java Developer">
+                        <input type="text" name="title" class="form-control" required placeholder="Напр: Junior Java Developer">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Город</label>
@@ -174,15 +180,15 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Описание стажировки</label>
-                        <textarea name="description" class="form-control" rows="5" required placeholder="Опишите требования, технологии и условия..."></textarea>
+                        <textarea name="description" class="form-control" rows="5" required placeholder="Требования, условия и стек..."></textarea>
                     </div>
                     <div class="alert alert-info py-2 small border-0 mb-0">
-                        <i class="bi bi-info-circle me-1"></i> После публикации вакансия будет отправлена на модерацию.
+                        <i class="bi bi-info-circle me-1"></i> Вакансия появится после модерации.
                     </div>
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-bold">Отправить на проверку</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Опубликовать</button>
                 </div>
             </form>
         </div>

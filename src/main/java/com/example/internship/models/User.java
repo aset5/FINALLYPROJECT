@@ -11,6 +11,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String resume;
 
     @Column(unique = true, nullable = false)
     private String username;
@@ -24,7 +25,8 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Company company;
 
-
+    public String getResume() { return resume; }
+    public void setResume(String resume) { this.resume = resume; }
 
     // Геттеры и сеттеры
 }
