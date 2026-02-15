@@ -16,4 +16,5 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     void deleteByStudent(User student);
     void deleteByInternship(Internship internship);
     void deleteByInternshipId(Long internshipId);
+    boolean existsByStudentAndInternship(User student, Internship internship);
 }

@@ -9,6 +9,7 @@ import com.example.internship.repositories.UserRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
@@ -36,15 +37,13 @@ public class StudentController {
         User student = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
-        // Теперь метод findByStudent существует в репозитории
         List<Application> apps = applicationRepository.findByStudent(student);
-
         model.addAttribute("myApplications", apps);
         return "student/application";
     }
 
     @PostMapping("/apply/{internshipId}")
-    public String apply(@PathVariable Long internshipId, Principal principal) {
+    public String apply(@PathVariable Long internshipId, Principal principal, RedirectAttributes redirectAttributes) {
         // 1. Ищем вакансию
         Internship internship = internshipRepository.findById(internshipId).orElse(null);
         if (internship == null) {
@@ -55,7 +54,14 @@ public class StudentController {
         User student = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Студент не найден"));
 
-        // 3. Создаем отклик
+        // 3. ПРОВЕРКА НА ПОВТОРНЫЙ ОТКЛИК
+        if (applicationRepository.existsByStudentAndInternship(student, internship)) {
+            // Используем FlashAttributes, чтобы передать сообщение об ошибке на главную страницу
+            redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликались на эту вакансию!");
+            return "redirect:/";
+        }
+
+        // 4. Создаем отклик, если проверки пройдены
         Application app = new Application();
         app.setStudent(student);
         app.setInternship(internship);
@@ -63,6 +69,7 @@ public class StudentController {
 
         applicationRepository.save(app);
 
+        redirectAttributes.addFlashAttribute("successMessage", "Отклик успешно отправлен!");
         return "redirect:/?success";
     }
 
@@ -82,6 +89,4 @@ public class StudentController {
         userRepository.save(user);
         return "redirect:/student/profile?success";
     }
-
-
 }
