@@ -4,11 +4,18 @@ import com.example.internship.models.*;
 import com.example.internship.repositories.*;
 import com.example.internship.services.TelegramBotService;
 import jakarta.transaction.Transactional;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -235,5 +242,30 @@ public class CompanyController {
 
         internshipRepository.save(existing);
         return "redirect:/company/dashboard?msg=remoderation";
+    }
+
+    @GetMapping("/download/resume/{studentId}")
+    @ResponseBody
+    public ResponseEntity<Resource> downloadResume(@PathVariable Long studentId) {
+        User student = userRepository.findById(studentId).orElseThrow();
+        if (student.getResumePath() == null) return ResponseEntity.notFound().build();
+
+        try {
+            Path filePath = Paths.get("uploads/resumes/").resolve(student.getResumePath());
+            Resource resource = new UrlResource(filePath.toUri());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + student.getResumePath() + "\"")
+                    .body(resource);
+        } catch (MalformedURLException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/student/{id}")
+    public String viewStudent(@PathVariable Long id, Model model) {
+        User student = userRepository.findById(id).orElseThrow();
+        model.addAttribute("student", student); // Передаем объект как "student"
+        return "company/student-view";
     }
 }

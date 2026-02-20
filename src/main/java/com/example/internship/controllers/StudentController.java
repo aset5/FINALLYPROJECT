@@ -6,11 +6,20 @@ import com.example.internship.services.TelegramBotService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+
+
 
 @Controller
 @RequestMapping("/student")
@@ -21,6 +30,7 @@ public class StudentController {
     private final InternshipRepository internshipRepository;
     private final MessageRepository messageRepository;
     private final TelegramBotService telegramBotService;
+    private final String UPLOAD_DIR = "uploads/resumes/";
 
     public StudentController(ApplicationRepository applicationRepository,
                              UserRepository userRepository,
@@ -139,12 +149,31 @@ public class StudentController {
 
     // 2. Обработать сохранение данных
     @PostMapping("/profile/update")
-    public String updateProfile(@ModelAttribute("user") User updatedData, Principal principal) {
+    public String updateProfile(@ModelAttribute("user") User updatedData,
+                                @RequestParam(value = "resumeFile", required = false) MultipartFile file,
+                                Principal principal) throws IOException {
         User user = userRepository.findByUsername(principal.getName()).orElseThrow();
-        // Если есть такое поле
+
+        // Обновляем текстовые данные
+        user.setFullName(updatedData.getFullName());
+        user.setEmail(updatedData.getEmail());
+        user.setResume(updatedData.getResume()); // сохраняем текст "О себе"
+
+        // Обработка файла
+        if (file != null && !file.isEmpty()) {
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            user.setResumePath(fileName);
+        }
 
         userRepository.save(user);
-
         return "redirect:/student/profile?success";
     }
 }
