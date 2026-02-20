@@ -128,4 +128,23 @@ public class StudentController {
         model.addAttribute("user", user);
         return "student/profile";
     }
+
+    // 1. Показать страницу редактирования профиля
+    @GetMapping("/profile/update")
+    public String editProfilePage(Model model, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        model.addAttribute("user", user);
+        return "student/profile"; // Путь к HTML-файлу
+    }
+
+    // 2. Обработать сохранение данных
+    @PostMapping("/profile/update")
+    public String updateProfile(@ModelAttribute("user") User updatedData, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        // Если есть такое поле
+
+        userRepository.save(user);
+
+        return "redirect:/student/profile?success";
+    }
 }
