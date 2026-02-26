@@ -15,7 +15,6 @@ public class DataLoader {
                                    InternshipRepository internshipRepository,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            // 1. Создаем Админа (только если его нет)
             if (userRepository.findByUsername("admin").isEmpty()) {
                 User admin = new User();
                 admin.setUsername("admin");
