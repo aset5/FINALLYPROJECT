@@ -7,10 +7,7 @@ import com.example.internship.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
@@ -63,6 +60,36 @@ public class UniversityAdminController {
 
         // ИСПРАВЛЕНО: добавляем префикс -admin
         return "redirect:/university-admin/dashboard";    }
+    // 1. Показать форму редактирования
+    @GetMapping("/internship/edit/{id}")
+    public String editInternship(@PathVariable Long id, Model model) {
+        Internship internship = internshipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Стажировка не найдена"));
+
+        model.addAttribute("internship", internship);
+        return "university/edit-internship"; // Путь к файлу формы
+    }
+
+    // 2. Сохранить изменения и отправить на модерацию
+    @PostMapping("/internship/update")
+    public String updateInternship(@ModelAttribute("internship") Internship internship) {
+        // 1. Загружаем существующую из базы
+        Internship existing = internshipRepository.findById(internship.getId()).get();
+
+        // 2. Обновляем поля из формы
+        existing.setTitle(internship.getTitle());
+        existing.setDescription(internship.getDescription());
+        existing.setStudyMaterials(internship.getStudyMaterials());
+        existing.setMaxPlaces(internship.getMaxPlaces());
+
+        // 3. СБРОС СТАТУСА — самое главное условие
+        existing.setStatus(InternshipStatus.PENDING);
+
+        internshipRepository.save(existing);
+
+        // Редирект обратно в кабинет с уведомлением
+        return "redirect:/university-admin/dashboard";    }
+
 
 
 }
