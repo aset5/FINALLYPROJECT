@@ -3,12 +3,14 @@ package com.example.internship.controllers;
 import com.example.internship.models.Internship;
 import com.example.internship.models.InternshipStatus;
 import com.example.internship.repositories.InternshipRepository;
+import com.example.internship.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.security.Principal;
 import java.util.List;
 
 @Controller
@@ -16,23 +18,17 @@ public class MainController {
     @Autowired
     private InternshipRepository internshipRepository;
 
-    @GetMapping("/")
-    public String home(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
-        List<Internship> internships;
+    @Autowired
+    private UserRepository userRepository;
 
-        if (keyword != null && !keyword.isEmpty()) {
-            // Если есть поисковый запрос, ищем по нему
-            internships = internshipRepository.findByStatusAndTitleContainingIgnoreCaseOrStatusAndDescriptionContainingIgnoreCase(
-                    InternshipStatus.APPROVED, keyword,
-                    InternshipStatus.APPROVED, keyword
-            );
-            model.addAttribute("keyword", keyword); // Возвращаем слово в поиск, чтобы оно не исчезало
-        } else {
-            // Если поиска нет, показываем все одобренные
-            internships = internshipRepository.findByStatus(InternshipStatus.APPROVED);
+    @GetMapping("/")
+    public String home(Model model, Principal principal) {
+        if (principal != null) {
+            userRepository.findByUsername(principal.getName())
+                    .ifPresent(user -> model.addAttribute("currentUser", user));
         }
 
-        model.addAttribute("internships", internships);
+        model.addAttribute("internships", internshipRepository.findByStatus(InternshipStatus.APPROVED));
         return "index";
     }
 }

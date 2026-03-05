@@ -18,6 +18,10 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @ManyToOne // Один университет может иметь несколько админов
+    @JoinColumn(name = "university_id")
+    private University university;
+
     // Добавляем отсутствующие поля:
     private String fullName;
     private String email;
@@ -30,6 +34,8 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private Role role; // STUDENT, COMPANY, ADMIN
+
+
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Company company;

@@ -20,33 +20,31 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Оставляем выключенным для простоты разработки
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Публичные страницы
                         .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
-
-                        // Защищенные разделы
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/university-admin/**").hasRole("UNIVERSITY_ADMIN")
                         .requestMatchers("/company/**").hasRole("COMPANY")
-                        .requestMatchers("/student/**").hasRole("STUDENT") // ОБЯЗАТЕЛЬНО для доступа студента
-
+                        .requestMatchers("/student/**").hasRole("STUDENT")
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .formLogin(login -> login
                         .loginPage("/login")
                         .successHandler((request, response, authentication) -> {
-                            // Получаем список ролей текущего пользователя
                             var roles = authentication.getAuthorities().stream()
                                     .map(r -> r.getAuthority())
                                     .toList();
 
-                            // Логика перенаправления после входа
-                            if (roles.contains("ROLE_ADMIN")) {
-                                response.sendRedirect("/admin/dashboard");
+                            // Лог в консоль для отладки
+                            System.out.println("User " + authentication.getName() + " logged in with roles: " + roles);
+
+                            if (roles.contains("ROLE_UNIVERSITY_ADMIN")) {
+                                response.sendRedirect("/university-admin/dashboard");
                             } else if (roles.contains("ROLE_COMPANY")) {
                                 response.sendRedirect("/company/dashboard");
-                            } else if (roles.contains("ROLE_STUDENT")) {
-                                response.sendRedirect("/"); // Студенты идут на главную смотреть вакансии
+                            } else if (roles.contains("ROLE_ADMIN")) {
+                                response.sendRedirect("/admin/dashboard");
                             } else {
                                 response.sendRedirect("/");
                             }
@@ -55,13 +53,8 @@ public class SecurityConfig {
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout") // Добавил параметр для уведомления
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
+                        .logoutSuccessUrl("/login?logout")
                         .permitAll()
-                )
-                .exceptionHandling(ex -> ex
-                        .accessDeniedPage("/?error=no_access") // Куда отправлять если нет прав
                 );
 
         return http.build();
