@@ -19,7 +19,7 @@ import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
+import java.util.stream.Collectors;
 
 
 @Controller
@@ -50,11 +50,21 @@ public class StudentController {
         User student = userRepository.findByUsername(principal.getName()).orElseThrow();
         List<Application> apps = applicationRepository.findByStudent(student);
 
-        // ИМЯ ДОЛЖНО БЫТЬ ТАКИМ ЖЕ, КАК В HTML (myApplications)
-        model.addAttribute("myApplications", apps);
+        // 1. Проверяем, рекомендовал ли университет этого студента (есть ли статус VERIFIED)
+        boolean isVerified = apps.stream()
+                .anyMatch(app -> app.getStatus() == ApplicationStatus.VERIFIED);
 
-        // Для надежности, чтобы работал цикл th:each="app : ${applications}",
-        // лучше оставить и второе имя, либо в HTML везде заменить на myApplications
+        // 2. Если студент рекомендован, загружаем вакансии от КОМПАНИЙ (где university == null)
+        if (isVerified) {
+            // Предполагаем, что у компаний поле university пустое
+            List<Internship> companyJobs = internshipRepository.findAll().stream()
+                    .filter(i -> i.getCompany() != null)
+                    .collect(Collectors.toList());
+            model.addAttribute("companyJobs", companyJobs);
+        }
+        model.addAttribute("user", student);
+        model.addAttribute("isVerified", isVerified);
+        model.addAttribute("myApplications", apps);
         model.addAttribute("applications", apps);
 
         return "student/application";
@@ -62,54 +72,57 @@ public class StudentController {
     @PostMapping("/apply/{internshipId}")
     public String apply(@PathVariable Long internshipId, Principal principal, RedirectAttributes redirectAttributes) {
         try {
-            // 1. Ищем стажировку
             Internship internship = internshipRepository.findById(internshipId)
                     .orElseThrow(() -> new RuntimeException("Стажировка не найдена"));
-
-            // 2. Ищем студента
             User student = userRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("Студент не найден"));
 
-            // 3. Проверка на дубликат
             if (applicationRepository.existsByStudentAndInternship(student, internship)) {
-                redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликнулись на эту стажировку.");
+                redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликнулись.");
                 return "redirect:/";
             }
 
-            // 4. Создаем отклик с МГНОВЕННЫМ ОДОБРЕНИЕМ
             Application application = new Application();
             application.setStudent(student);
             application.setInternship(internship);
             application.setAppliedAt(LocalDateTime.now());
-            application.setStatus(ApplicationStatus.APPROVED); // Сразу APPROVED!
+
+            // ЛОГИКА ОСЫ ЖЕРДЕ:
+            if (internship.getUniversity() != null) {
+                // Егер бұл Университет бағдарламасы болса - БІРДЕН МАҚҰЛДАУ
+                application.setStatus(ApplicationStatus.APPROVED);
+                redirectAttributes.addFlashAttribute("successMessage", "Вы успешно записаны на обучение!");
+            } else {
+                // Егер бұл Компания болса - КҮТУ (PENDING)
+                application.setStatus(ApplicationStatus.PENDING);
+                redirectAttributes.addFlashAttribute("successMessage", "Отклик отправлен. Ожидайте одобрения компании.");
+            }
 
             applicationRepository.save(application);
-
-            redirectAttributes.addFlashAttribute("successMessage", "Вы успешно записаны!");
-
         } catch (Exception e) {
-            // Если база всё еще выдает ошибку, мы увидим её в логах, а юзер получит сообщение
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка базы данных: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка: " + e.getMessage());
         }
-
-        return "redirect:/";
+        return "redirect:/student/my-applications";
     }
     @GetMapping("/messages/{internshipId}")
     public String chatPage(@PathVariable Long internshipId, Model model, Principal principal) {
         User me = userRepository.findByUsername(principal.getName()).orElseThrow();
-        Internship internship = internshipRepository.findById(internshipId).orElseThrow();
+        Internship internship = internshipRepository.findById(internshipId)
+                .orElseThrow(() -> new RuntimeException("Стажировка не найдена"));
 
-        // ПРОВЕРКА: Одобрена ли заявка этого студента на эту стажировку?
+        // ТЕКСЕРУ: Студент қабылданды ма?
         boolean isAccepted = applicationRepository.findByStudent(me).stream()
                 .anyMatch(app -> app.getInternship().getId().equals(internshipId)
-                        && app.getStatus() == ApplicationStatus.ACCEPTED);
+                        && (app.getStatus() == ApplicationStatus.ACCEPTED
+                        || app.getStatus() == ApplicationStatus.APPROVED));
 
         if (!isAccepted) {
             return "redirect:/student/my-applications?error=not_accepted";
         }
 
         User companyUser = internship.getCompany().getUser();
+
+        // Хабарламалар тарихын жүктеу
         List<Message> history = messageRepository.findByInternshipIdAndSenderIdAndReceiverIdOrInternshipIdAndSenderIdAndReceiverIdOrderBySentAtAsc(
                 internshipId, me.getId(), companyUser.getId(),
                 internshipId, companyUser.getId(), me.getId()
@@ -118,6 +131,9 @@ public class StudentController {
         model.addAttribute("history", history);
         model.addAttribute("companyUser", companyUser);
         model.addAttribute("internshipId", internshipId);
+        model.addAttribute("internshipTitle", internship.getTitle()); // Чат тақырыбы үшін
+        model.addAttribute("currentUsername", me.getUsername()); // Хабарламаларды оң/солға бөлу үшін
+
         return "student/chat";
     }
 
@@ -171,23 +187,24 @@ public class StudentController {
                                 Principal principal) throws IOException {
         User user = userRepository.findByUsername(principal.getName()).orElseThrow();
 
-        // Обновляем текстовые данные
+        // Тексттік мәліметтерді жаңарту
         user.setFullName(updatedData.getFullName());
         user.setEmail(updatedData.getEmail());
-        user.setResume(updatedData.getResume()); // сохраняем текст "О себе"
+        user.setResume(updatedData.getResume());
 
-        // Обработка файла
+        // Файлды өңдеу (PDF/DOCX)
         if (file != null && !file.isEmpty()) {
             Path uploadPath = Paths.get(UPLOAD_DIR);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
+            // Файл атының қайталанбауы үшін UUID қосамыз
             String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
             Path filePath = uploadPath.resolve(fileName);
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            user.setResumePath(fileName);
+            user.setResumePath(fileName); // Дерекқорға файл атын сақтаймыз
         }
 
         userRepository.save(user);
@@ -236,5 +253,39 @@ public class StudentController {
         return "redirect:/student/my-applications?success=completed";
     }
 
+    @PostMapping("/verify-student/{appId}")
+    public String verifyStudent(@PathVariable Long appId) {
+        Application app = applicationRepository.findById(appId)
+                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
 
+        if (app.getStatus() == ApplicationStatus.COMPLETED) {
+            // Устанавливаем статус, который означает "Прошел проверку качества"
+            app.setStatus(ApplicationStatus.VERIFIED);
+            applicationRepository.save(app);
+        }
+
+        return "redirect:/university-admin/dashboard";
+    }
+
+    @GetMapping("/job-market")
+    public String showJobMarket(Model model, Principal principal) {
+        User student = userRepository.findByUsername(principal.getName()).orElseThrow();
+
+        // Проверяем: рекомендовал ли хоть один ВУЗ этого студента?
+        boolean isVerified = applicationRepository.existsByStudentIdAndStatus(student.getId(), ApplicationStatus.VERIFIED);
+
+        if (!isVerified) {
+            // Если не верифицирован — отправляем назад с предупреждением
+            return "redirect:/student/my-applications?access=denied";
+        }
+
+        // Загружаем только вакансии КОМПАНИЙ (у которых поле university == null)
+        List<Internship> companyJobs = internshipRepository.findAll().stream()
+                .filter(i -> i.getCompany() != null)
+                .filter(i -> i.getStatus() == InternshipStatus.APPROVED)
+                .collect(Collectors.toList());
+
+        model.addAttribute("jobs", companyJobs);
+        return "student/job-market";
+    }
 }

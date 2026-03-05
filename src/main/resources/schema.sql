@@ -19,3 +19,19 @@ ALTER TABLE internships ADD COLUMN study_materials TEXT;
 
 ALTER TABLE internships ADD COLUMN is_job BOOLEAN DEFAULT FALSE;
 ALTER TABLE internships ADD COLUMN study_materials TEXT;
+
+-- 1. Ескі шектеуді өшіреміз (аты қатеде көрсетілген: application_status_check)
+ALTER TABLE application DROP CONSTRAINT application_status_check;
+
+-- 2. Жаңа тізіммен шектеуді қайта қосамыз (барлық статустарыңды тізіп шық)
+ALTER TABLE application ADD CONSTRAINT application_status_check
+    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'ENROLLED', 'VERIFIED'));
+
+ALTER TABLE application DROP CONSTRAINT IF EXISTS application_status_check;
+
+-- 1. Алдымен ескі шектеуді өшіреміз
+ALTER TABLE application DROP CONSTRAINT IF EXISTS application_status_check;
+
+-- 2. Жаңа рұқсат етілген статустар тізімін қосамыз (ACCEPTED-ті қоса алғанда)
+ALTER TABLE application ADD CONSTRAINT application_status_check
+    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'VERIFIED', 'ENROLLED', 'ACCEPTED', 'COMPLETED'));

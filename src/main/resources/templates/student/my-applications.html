@@ -21,29 +21,35 @@
         </thead>
         <tbody>
         <tr th:each="app : ${applications}">
-            <td class="fw-bold" th:text="${app.internship.title}">Название</td>
+            <td class="fw-bold">
+                <span th:text="${app.internship.title}">Название</span><br>
+                <small class="text-muted" th:text="${app.internship.company != null ? app.internship.company.name : 'Университет'}"></small>
+            </td>
             <td>
-        <span class="badge"
-              th:classappend="${app.status.name() == 'COMPLETED' ? 'bg-success' : (app.status.name() == 'APPROVED' ? 'bg-info' : 'bg-warning')}"
-              th:text="${app.status}">Статус</span>
+            <span class="badge"
+                  th:classappend="${app.status.name() == 'ACCEPTED' || app.status.name() == 'APPROVED' ? 'bg-success' :
+                                   (app.status.name() == 'REJECTED' ? 'bg-danger' : 'bg-warning')}"
+                  th:text="${app.status}">Статус</span>
             </td>
             <td>
                 <div class="d-flex gap-2">
-                    <a th:href="@{'/student/learning/' + ${app.id}}" class="btn btn-primary btn-sm d-flex align-items-center">
-                        <i class="bi bi-book me-1"></i> Обучение
+                    <a th:href="@{/student/learning/{id}(id=${app.id})}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-book"></i> Обучение
                     </a>
 
-                    <a th:if="${app.status.name() == 'APPROVED'}" th:href="@{'/student/test/' + ${app.id}}" class="btn btn-outline-primary btn-sm">
-                        Тест
-                    </a>
+                    <div th:if="${app.status.name() == 'ACCEPTED' || app.status.name() == 'APPROVED'}">
+                        <a th:href="@{/student/messages/{id}(id=${app.internship.id})}" class="btn btn-success btn-sm">
+                            <i class="bi bi-chat-dots"></i> Чатпен байланысу
+                        </a>
+                    </div>
 
-                    <a th:if="${app.status.name() == 'COMPLETED'}" th:href="@{/student/job-market}" class="btn btn-success btn-sm">
-                        <i class="bi bi-briefcase me-1"></i> Вакансии
+                    <a th:if="${app.status.name() == 'VERIFIED'}" th:href="@{/student/job-market}" class="btn btn-outline-dark btn-sm">
+                        На вакансии
                     </a>
                 </div>
             </td>
         </tr>
-        <tr th:if="${#lists.isEmpty(myApplications)}">
+        <tr th:if="${#lists.isEmpty(applications)}">
             <td colspan="3" class="text-center py-4 text-muted">Вы еще не откликнулись ни на одну программу.</td>
         </tr>
         </tbody>

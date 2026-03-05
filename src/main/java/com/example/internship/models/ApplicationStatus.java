@@ -6,6 +6,7 @@ public enum ApplicationStatus {
     ACCEPTED,
     APPROVED,
     IN_PROGRESS,// В процессе обучения/тестирования
-    COMPLETED,// Сразу используем этот// Студент одобрен (оффер/интервью)
+    COMPLETED,
+    VERIFIED,// Сразу используем этот// Студент одобрен (оффер/интервью)
     REJECTED    // Отказ
 }

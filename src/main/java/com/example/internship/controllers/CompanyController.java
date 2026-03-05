@@ -12,6 +12,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.net.MalformedURLException;
 import java.nio.file.Path;
@@ -114,13 +115,15 @@ public class CompanyController {
     @PostMapping("/applications/{id}/accept")
     public String acceptApplication(@PathVariable Long id) {
         Application app = applicationRepository.findById(id).orElseThrow();
+
+        // Статусты бірізділікке келтіреміз (мысалы, ACCEPTED)
         app.setStatus(ApplicationStatus.ACCEPTED);
         applicationRepository.save(app);
 
-        // Уведомление в Telegram об одобрении
+        // Студентке чат ашылғаны туралы хабарлама жіберу
         if (app.getStudent().getTelegramChatId() != null) {
             telegramBotService.sendNotification(app.getStudent().getTelegramChatId(),
-                    "🎉 Поздравляем! Ваша заявка на вакансию \"" + app.getInternship().getTitle() + "\" одобрена компанией " + app.getInternship().getCompany().getName() + "!");
+                    "✅ Компания сіздің өтініміңізді қабылдады! Енді чат арқылы сөйлесе аласыз.");
         }
         return "redirect:/company/dashboard";
     }
@@ -267,5 +270,19 @@ public class CompanyController {
         User student = userRepository.findById(id).orElseThrow();
         model.addAttribute("student", student); // Передаем объект как "student"
         return "company/student-view";
+    }
+
+    @PostMapping("/company/application/approve/{id}")
+    public String approveByCompany(@PathVariable Long id, RedirectAttributes ra) {
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Өтінім табылмады"));
+
+        // Компания мақұлдаған кезде ғана статус өзгереді
+// ACCEPTED орнына APPROVED қолданып көр
+        app.setStatus(ApplicationStatus.APPROVED);
+        applicationRepository.save(app);
+
+        ra.addFlashAttribute("successMessage", "Студент сәтті қабылданды!");
+        return "redirect:/company/dashboard"; // Компанияның басты бетіне қайту
     }
 }

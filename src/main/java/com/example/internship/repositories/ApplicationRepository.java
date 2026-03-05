@@ -20,7 +20,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     boolean existsByStudentAndInternship(User student, Internship internship);
     long countByInternship(Internship internship);
     boolean existsByStudentAndStatus(User student, ApplicationStatus status);
-
+    boolean existsByStudentIdAndStatus(Long studentId, ApplicationStatus status);
     // Также тебе пригодятся эти методы (если их еще нет):
 
 }

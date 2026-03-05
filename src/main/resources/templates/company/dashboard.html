@@ -15,6 +15,7 @@
         .table-header { background-color: #f1f3f5; font-weight: 600; color: #495057; }
         .student-initials { width: 40px; height: 40px; background: #e7f1ff; color: #0d6efd; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; }
         .tg-alert { border-left: 4px solid #0088cc; background: #e1f5fe; }
+        .badge-verified { background-color: #0d6efd; color: white; font-size: 0.7rem; }
     </style>
 </head>
 <body>
@@ -27,7 +28,7 @@
         <div class="d-flex align-items-center">
             <span class="me-3 text-muted small">
                 <i class="bi bi-person-circle me-1"></i>
-                Работодатель: <span th:text="${#authentication.name}" class="fw-bold">Username</span>
+                Работодатель: <span th:text="${user.username}" class="fw-bold">Username</span>
             </span>
             <form th:action="@{/logout}" method="post" class="m-0">
                 <button class="btn btn-outline-danger btn-sm px-3">Выйти</button>
@@ -40,200 +41,153 @@
     <div th:if="${user != null and user.telegramChatId == null}" class="alert alert-info tg-alert border-0 shadow-sm d-flex justify-content-between align-items-center mb-4">
         <div>
             <i class="bi bi-telegram me-2 text-primary h4 mb-0"></i>
-            <strong>Включите Telegram-уведомления!</strong> Чтобы мгновенно узнавать о новых сообщениях от студентов.
+            <strong>Включите Telegram-уведомления!</strong> Мгновенно узнавайте об откликах.
         </div>
         <a th:href="'https://t.me/intern_pro_kz_bot?start=user_' + ${user.id}" target="_blank" class="btn btn-primary btn-sm rounded-pill px-4">
             Подключить бот
         </a>
     </div>
 
-    <div th:if="${param.msg != null and param.msg[0] == 'remoderation'}"
-         class="alert alert-info alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert">
-        <i class="bi bi-shield-check me-2"></i>
-        Изменения сохранены. Вакансия отправлена на <strong>повторную модерацию</strong>.
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold"><i class="bi bi-collection me-2 text-primary"></i>Мои стажировки</h2>
-        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#postJobModal">
-            <i class="bi bi-plus-circle me-2"></i>Новая вакансия
-        </button>
-    </div>
-
-    <div class="row mb-5 text-center">
-        <div class="col-md-3">
+    <div class="row mb-4">
+        <div class="col-md-4">
             <div class="card card-custom p-4 bg-white shadow-sm border-start border-primary border-4">
-                <div class="text-muted small fw-bold text-uppercase">Публикации</div>
+                <div class="text-muted small fw-bold text-uppercase">Мои вакансии</div>
                 <div class="h2 fw-bold mb-0" th:text="${myInternships.size()}">0</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card card-custom p-4 bg-white shadow-sm border-start border-info border-4">
-                <div class="text-muted small fw-bold text-uppercase">Отклики</div>
+                <div class="text-muted small fw-bold text-uppercase">Всего откликов</div>
                 <div class="h2 fw-bold mb-0" th:text="${candidates != null ? candidates.size() : 0}">0</div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card card-custom p-4 bg-white shadow-sm border-start border-success border-4">
-                <div class="text-muted small fw-bold text-uppercase">Бот</div>
+                <div class="text-muted small fw-bold text-uppercase">Статус бота</div>
                 <div class="h5 fw-bold mb-0 mt-2">
-                    <span th:if="${user != null and user.telegramChatId != null}" class="text-success"><i class="bi bi-check-all"></i> Активен</span>
-                    <span th:if="${user == null or user.telegramChatId == null}" class="text-muted small">Не привязан</span>
+                    <span th:if="${user.telegramChatId != null}" class="text-success"><i class="bi bi-check-all"></i> Активен</span>
+                    <span th:if="${user.telegramChatId == null}" class="text-muted">Не подключен</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card card-custom shadow-sm overflow-hidden mb-5">
-        <div class="card-header bg-white py-3">
+    <div class="card card-custom shadow-sm mb-5">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold">Управление публикациями</h5>
+            <button class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#postJobModal">
+                <i class="bi bi-plus-lg"></i> Добавить вакансию
+            </button>
         </div>
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-            <tr>
-                <th class="ps-4">Позиция</th>
-                <th>Локация</th>
-                <th>Статус</th>
-                <th class="text-end pe-4">Действия</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="job : ${myInternships}">
-                <td class="ps-4">
-                    <div class="fw-bold text-dark" th:text="${job.title}">Position</div>
-                    <div class="small text-muted" th:text="${#strings.abbreviate(job.description, 60)}">Desc</div>
-                </td>
-                <td><i class="bi bi-geo-alt me-1"></i><span th:text="${job.city}">City</span></td>
-                <td>
-                    <span th:if="${job.status.name() == 'APPROVED'}" class="badge bg-success-subtle text-success status-badge border border-success">
-                        <i class="bi bi-check-circle me-1"></i> Опубликовано
-                    </span>
-                    <span th:if="${job.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning status-badge border border-warning">
-                        <i class="bi bi-clock-history me-1"></i> На модерации
-                    </span>
-                    <span th:if="${job.status.name() == 'CLOSED'}" class="badge bg-secondary-subtle text-secondary status-badge border border-secondary">
-                        <i class="bi bi-archive me-1"></i> Архив
-                    </span>
-                </td>
-                <td class="text-end pe-4">
-                    <div class="d-inline-flex gap-2">
-                        <a th:href="@{'/company/internships/edit/' + ${job.id}}" class="btn btn-sm btn-outline-primary" title="Редактировать">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <form th:if="${job.status.name() == 'APPROVED'}" th:action="@{'/company/internships/' + ${job.id} + '/close'}" method="post" class="m-0">
-                            <button type="submit" class="btn btn-sm btn-outline-warning" title="В архив"><i class="bi bi-archive"></i></button>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Позиция</th>
+                    <th>Локация</th>
+                    <th>Статус</th>
+                    <th class="text-end pe-4">Действия</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="job : ${myInternships}">
+                    <td class="ps-4">
+                        <div class="fw-bold" th:text="${job.title}">Java Dev</div>
+                        <div class="text-muted small" th:text="${job.applications.size() + ' откликов'}">0 откликов</div>
+                    </td>
+                    <td th:text="${job.city ?: 'Дистанционно'}">Алматы</td>
+                    <td>
+                        <span th:if="${job.status.name() == 'APPROVED'}" class="badge bg-success-subtle text-success status-badge">Активна</span>
+                        <span th:if="${job.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning status-badge">Модерация</span>
+                    </td>
+                    <td class="text-end pe-4">
+                        <a th:href="@{/company/internships/edit/{id}(id=${job.id})}" class="btn btn-sm btn-outline-primary me-2"><i class="bi bi-pencil"></i></a>
+                        <form th:action="@{/company/delete/{id}(id=${job.id})}" method="post" class="d-inline">
+                            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить вакансию?')"><i class="bi bi-trash"></i></button>
                         </form>
-                        <form th:if="${job.status.name() == 'CLOSED'}" th:action="@{'/company/internships/' + ${job.id} + '/reopen'}" method="post" class="m-0">
-                            <button type="submit" class="btn btn-sm btn-outline-success" title="Открыть заново"><i class="bi bi-arrow-counterclockwise"></i></button>
-                        </form>
-                        <form th:action="@{'/company/delete/' + ${job.id}}" method="post" class="m-0" onsubmit="return confirm('Удалить навсегда?')">
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="mb-4">
-        <h2 class="fw-bold"><i class="bi bi-people me-2 text-primary"></i>Кандидаты на стажировку</h2>
-    </div>
-
-    <div class="card card-custom shadow-sm overflow-hidden mb-5">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-header">
-            <tr>
-                <th class="ps-4">Студент</th>
-                <th>Вакансия</th>
-                <th>Дата отклика</th>
-                <th class="text-end pe-4">Решение / Связь</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="app : ${candidates}">
-                <td class="ps-4">
-                    <div class="d-flex align-items-center">
-                        <div class="student-initials me-3" th:text="${#strings.substring(app.student.username,0,1).toUpperCase()}">U</div>
-                        <div class="text-start">
-                            <div class="fw-bold text-dark" th:text="${app.student.username}">Student</div>
-                            <div class="small text-muted">Кандидат</div>
+    <div class="card card-custom shadow-sm mb-5">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">Отклики студентов</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Кандидат</th>
+                    <th>Вакансия</th>
+                    <th>Дата</th>
+                    <th class="text-end pe-4">Решение</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="candidate : ${candidates}">
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="student-initials me-2" th:text="${candidate.student.username.substring(0,1).toUpperCase()}">S</div>
+                            <div>
+                                <div class="fw-bold">
+                                    <span th:text="${candidate.student.fullName ?: candidate.student.username}">Имя</span>
+                                    <span th:if="${candidate.status.name() == 'VERIFIED'}" class="badge badge-verified ms-1" title="Верифицировано ВУЗом">
+                                            <i class="bi bi-patch-check-fill me-1"></i>ВУЗ PRO
+                                        </span>
+                                </div>
+                                <div class="text-muted small" th:text="${candidate.student.email}">email</div>
+                            </div>
                         </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge bg-light text-dark border fw-normal" th:text="${app.internship.title}">Job</span>
-                </td>
-                <td class="text-muted small">
-                    <i class="bi bi-calendar-event me-1"></i>
-                    <span th:text="${#temporals.format(app.appliedAt, 'dd.MM.yyyy HH:mm')}">Date</span>
-                </td>
-                <td class="text-end pe-4">
-                    <div class="d-inline-flex gap-2 align-items-center">
+                    </td>
+                    <td><span class="badge bg-light text-dark border" th:text="${candidate.internship.title}">Job</span></td>
+                    <td class="small text-muted" th:text="${#temporals.format(candidate.appliedAt, 'dd.MM.yyyy')}">01.01</td>
+                    <td class="text-end pe-4">
+                        <a th:href="@{/company/messages/{iId}/{sId}(iId=${candidate.internship.id}, sId=${candidate.student.id})}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1">Чат</a>
+                        <a th:href="@{/company/student/{id}(id=${candidate.student.id})}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-1">Профиль</a>
 
-                        <a th:href="@{'/company/messages/' + ${app.internship.id} + '/' + ${app.student.id}}"
-                           class="btn btn-sm btn-primary shadow-sm" title="Написать сообщение">
-                            <i class="bi bi-chat-dots me-1"></i> Чат
-                        </a>
-
-                        <div th:if="${app.status == null || app.status.name() == 'PENDING'}" class="d-inline-flex gap-2">
-                            <form th:action="@{'/company/applications/' + ${app.id} + '/accept'}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-success">Одобрить</button>
-                            </form>
-                            <form th:action="@{'/company/applications/' + ${app.id} + '/reject'}" method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Отказать</button>
-                            </form>
-                        </div>
-
-                        <span th:if="${app.status != null && app.status.name() == 'ACCEPTED'}" class="badge bg-success px-3 py-2 rounded-pill">
-                             <i class="bi bi-person-check me-1"></i> Одобрен
-                        </span>
-                        <span th:if="${app.status != null && app.status.name() == 'REJECTED'}" class="badge bg-secondary px-3 py-2 rounded-pill">
-                             <i class="bi bi-person-x me-1"></i> Отклонен
-                        </span>
-
-                        <a th:href="@{'/company/student-profile/' + ${app.student.id}}" class="btn btn-sm btn-outline-info ms-2" title="Профиль">
-                            <i class="bi bi-file-earmark-person"></i>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-            <tr th:if="${candidates == null || candidates.isEmpty()}">
-                <td colspan="4" class="text-center py-5 text-muted">Новых откликов пока нет.</td>
-            </tr>
-            </tbody>
-        </table>
+                        <form th:if="${candidate.status.name() == 'PENDING' or candidate.status.name() == 'VERIFIED'}" th:action="@{/company/applications/{id}/accept(id=${candidate.id})}" method="post" class="d-inline">
+                            <button class="btn btn-sm btn-success rounded-pill px-3">Принять</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(candidates)}">
+                    <td colspan="4" class="text-center py-5 text-muted">Пока нет новых откликов.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <div class="modal fade" id="postJobModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white border-0">
-                <h5 class="modal-title fw-bold">Новая стажировка</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog">
+        <form th:action="@{/company/add}" method="post" class="modal-content border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold">Новая вакансия</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form th:action="@{/company/add}" method="post">
-                <div class="modal-body p-4 text-start">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Название позиции</label>
-                        <input type="text" name="title" class="form-control" required placeholder="Junior Java Developer">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Город</label>
-                        <input type="text" name="city" class="form-control" required placeholder="Алматы">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Описание стажировки</label>
-                        <textarea name="description" class="form-control" rows="5" required></textarea>
-                    </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Название позиции</label>
+                    <input type="text" name="title" class="form-control rounded-3" placeholder="Напр: Frontend Developer" required>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Опубликовать</button>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Город</label>
+                    <input type="text" name="city" class="form-control rounded-3" placeholder="Алматы">
                 </div>
-            </form>
-        </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Описание и требования</label>
+                    <textarea name="description" class="form-control rounded-3" rows="4" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Отмена</button>
+                <button type="submit" class="btn btn-primary px-4">Опубликовать</button>
+            </div>
+        </form>
     </div>
 </div>
 

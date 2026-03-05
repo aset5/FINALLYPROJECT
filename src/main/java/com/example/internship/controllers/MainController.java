@@ -1,8 +1,6 @@
 package com.example.internship.controllers;
 
-import com.example.internship.models.Internship;
-import com.example.internship.models.InternshipStatus;
-import com.example.internship.models.Role;
+import com.example.internship.models.*;
 import com.example.internship.repositories.ApplicationRepository;
 import com.example.internship.repositories.InternshipRepository;
 import com.example.internship.repositories.UserRepository;
@@ -14,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 public class MainController {
@@ -27,32 +26,44 @@ public class MainController {
 
 
     @GetMapping("/")
-    public String home(Model model, Principal principal) {
+    public String index(Model model, Principal principal) {
+        // 1. Жүйеге кірген қолданушыны анықтау
+        User user = null;
+        boolean isVerified = false;
+        Long studentUniId = null;
+
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
-                model.addAttribute("currentUser", user);
-
-                List<Internship> list;
-                if (user.getRole() == Role.STUDENT && user.getUniversity() != null) {
-                    list = internshipRepository.findByStatusAndUniversityId(
-                            InternshipStatus.APPROVED, user.getUniversity().getId());
-                } else {
-                    list = internshipRepository.findByStatus(InternshipStatus.APPROVED);
+            user = userRepository.findByUsername(principal.getName()).orElse(null);
+            if (user != null) {
+                // Студенттің статусын тексеру
+                isVerified = applicationRepository.existsByStudentIdAndStatus(user.getId(), ApplicationStatus.VERIFIED);
+                // Студенттің университетін анықтау
+                if (user.getUniversity() != null) {
+                    studentUniId = user.getUniversity().getId();
                 }
-                model.addAttribute("internships", list);
-
-                // ДОБАВЛЕНО: Список ID стажировок, на которые студент уже откликнулся
-                if (user.getRole() == Role.STUDENT) {
-                    List<Long> appliedIds = applicationRepository.findByStudent(user)
-                            .stream()
-                            .map(app -> app.getInternship().getId())
-                            .toList();
-                    model.addAttribute("appliedIds", appliedIds);
-                }
-            });
-        } else {
-            model.addAttribute("internships", internshipRepository.findByStatus(InternshipStatus.APPROVED));
+            }
         }
+
+        // 2. Университет бағдарламаларын фильтрлеу
+        // ТЕК студент оқитын университеттің бағдарламаларын көрсету
+        final Long finalStudentUniId = studentUniId; // lambda үшін
+        List<Internship> universityPrograms = internshipRepository.findAll().stream()
+                .filter(i -> i.getUniversity() != null)
+                .filter(i -> i.getStatus() == InternshipStatus.APPROVED)
+                .filter(i -> finalStudentUniId != null && i.getUniversity().getId().equals(finalStudentUniId))
+                .collect(Collectors.toList());
+
+        // 3. Компания вакансиялары (барлығына ортақ, бірақ көру үшін isVerified керек болады HTML-де)
+        List<Internship> companyJobs = internshipRepository.findAll().stream()
+                .filter(i -> i.getCompany() != null)
+                .filter(i -> i.getStatus() == InternshipStatus.APPROVED)
+                .collect(Collectors.toList());
+
+        // Модельге мәліметтерді қосу
+        model.addAttribute("uniPrograms", universityPrograms);
+        model.addAttribute("companyJobs", companyJobs);
+        model.addAttribute("isVerified", isVerified);
+
         return "index";
     }
 }

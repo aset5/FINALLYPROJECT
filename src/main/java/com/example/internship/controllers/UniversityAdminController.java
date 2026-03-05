@@ -1,6 +1,7 @@
 package com.example.internship.controllers;
 
 import com.example.internship.models.*;
+import com.example.internship.repositories.ApplicationRepository;
 import com.example.internship.repositories.InternshipRepository;
 import com.example.internship.repositories.UniversityRepository;
 import com.example.internship.repositories.UserRepository;
@@ -25,6 +26,9 @@ public class UniversityAdminController {
 
     @Autowired
     private InternshipRepository internshipRepository;
+
+    @Autowired
+    private ApplicationRepository applicationRepository;
 
     @GetMapping("/dashboard") // Теперь полный путь будет: /university-admin/dashboard
     public String dashboard(Model model, Principal principal) {
@@ -90,6 +94,31 @@ public class UniversityAdminController {
         // Редирект обратно в кабинет с уведомлением
         return "redirect:/university-admin/dashboard";    }
 
+    @PostMapping("/application/verify/{id}")
+    public String verifyApplication(@PathVariable Long id) {
+        // 1. Өтінімді (Application) ID бойынша табамыз
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Өтінім табылмады: " + id));
 
+        // 2. Статусты VERIFIED-ке ауыстырамыз
+        app.setStatus(ApplicationStatus.VERIFIED);
 
+        // 3. Өзгерісті сақтаймыз
+        applicationRepository.save(app);
+
+        // 4. Қайтадан тізім бетіне жібереміз (Адресті өзгертуің мүмкін)
+        return "redirect:/university-admin/dashboard?success=verified";
+    }
+
+//    @PostMapping("/application/verify/{id}")
+//    public String verifyStudent(@PathVariable Long id) {
+//        Application app = applicationRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
+//
+//        // ВУЗ вручную подтверждает, что студент успешно прошел программу
+//        app.setStatus(ApplicationStatus.VERIFIED);
+//        applicationRepository.save(app);
+//
+//        return "redirect:/university-admin/dashboard?verified=true";
+//    }
 }
