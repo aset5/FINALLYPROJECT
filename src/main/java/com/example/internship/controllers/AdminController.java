@@ -18,20 +18,22 @@ public class AdminController {
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
     private final CompanyRepository companyRepository;
-    private final MessageRepository messageRepository; // Добавлено
+    private final MessageRepository messageRepository;
 
     @Autowired
     public AdminController(InternshipRepository internshipRepository,
                            UserRepository userRepository,
                            ApplicationRepository applicationRepository,
                            CompanyRepository companyRepository,
-                           MessageRepository messageRepository) { // Добавлено
+                           MessageRepository messageRepository) {
         this.internshipRepository = internshipRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
         this.companyRepository = companyRepository;
         this.messageRepository = messageRepository;
     }
+
+    // --- УПРАВЛЕНИЕ СТАЖИРОВКАМИ ---
 
     @GetMapping("/dashboard")
     public String adminDashboard(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
@@ -43,27 +45,37 @@ public class AdminController {
             internships = internshipRepository.findAll();
         }
         model.addAttribute("allInternships", internships);
+        // Добавляем также список на модерацию, чтобы видеть всё на одной странице
+        model.addAttribute("pendingInternships", internshipRepository.findByStatus(InternshipStatus.PENDING));
         return "admin/dashboard";
+    }
+
+    @GetMapping("/moderation")
+    public String showModerationList(Model model) {
+        model.addAttribute("pendingInternships", internshipRepository.findByStatus(InternshipStatus.PENDING));
+        // Можно использовать отдельный шаблон или тот же dashboard
+        return "admin/dashboard";
+    }
+
+    @PostMapping("/approve/{id}")
+    public String approveInternship(@PathVariable Long id) {
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        internship.setStatus(InternshipStatus.APPROVED);
+        internshipRepository.save(internship);
+        return "redirect:/admin/dashboard";
     }
 
     @PostMapping("/delete/{id}")
     @Transactional
     public String deleteInternship(@PathVariable Long id) {
         Internship internship = internshipRepository.findById(id).orElseThrow();
-        // Сначала удаляем сообщения и отклики, связанные с вакансией
         messageRepository.deleteByInternship(internship);
         applicationRepository.deleteByInternship(internship);
         internshipRepository.delete(internship);
         return "redirect:/admin/dashboard";
     }
 
-    @PostMapping("/approve/{id}")
-    public String approve(@PathVariable Long id) {
-        Internship internship = internshipRepository.findById(id).orElseThrow();
-        internship.setStatus(InternshipStatus.APPROVED);
-        internshipRepository.save(internship);
-        return "redirect:/admin/dashboard";
-    }
+    // --- УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ---
 
     @GetMapping("/users")
     public String listUsers(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
@@ -83,30 +95,21 @@ public class AdminController {
     public String deleteUser(@PathVariable Long id) {
         User user = userRepository.findById(id).orElseThrow();
 
-        // 1. Удаляем ВСЕ сообщения, где этот пользователь — отправитель или получатель
         messageRepository.deleteBySenderIdOrReceiverId(id, id);
-
-        // 2. Удаляем отклики самого пользователя (если он студент)
         applicationRepository.deleteByStudent(user);
 
-        // 3. Если это компания, чистим всё, что с ней связано
         Company company = companyRepository.findByUserId(user.getId());
         if (company != null) {
             List<Internship> companyJobs = internshipRepository.findByCompany(company);
             for (Internship job : companyJobs) {
-                // Удаляем сообщения и отклики по каждой вакансии компании
                 messageRepository.deleteByInternship(job);
                 applicationRepository.deleteByInternship(job);
             }
-            // Удаляем сами вакансии
             internshipRepository.deleteByCompany(company);
-            // Удаляем профиль компании
             companyRepository.delete(company);
         }
 
-        // 4. Теперь, когда нет никаких связей в других таблицах, удаляем пользователя
         userRepository.delete(user);
-
         return "redirect:/admin/users";
     }
 }

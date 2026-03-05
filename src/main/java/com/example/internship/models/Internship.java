@@ -2,18 +2,15 @@ package com.example.internship.models;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
 import java.util.List;
 
 @Data
 @Entity
+@Table(name = "internships")
 public class Internship {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @OneToMany(mappedBy = "internship", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Application> applications;
 
     private String title;
     private String city;
@@ -21,11 +18,27 @@ public class Internship {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    // Оставляем только этот статус!
+    // Оставляем один статус. По умолчанию — PENDING.
     @Enumerated(EnumType.STRING)
     private InternshipStatus status = InternshipStatus.PENDING;
 
+    // Связь с Университетом (кто курирует/создал сейчас)
+    @ManyToOne
+    @JoinColumn(name = "university_id")
+    private University university;
+
+    // Связь с Компанией (оставляем для будущего трудоустройства)
     @ManyToOne
     @JoinColumn(name = "company_id")
     private Company company;
+
+    // Список заявок студентов
+    @OneToMany(mappedBy = "internship", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Application> applications;
+
+    private int maxPlaces = 0;
+
+    public boolean hasAvailablePlaces() {
+        return applications == null || applications.size() < maxPlaces;
+    }
 }

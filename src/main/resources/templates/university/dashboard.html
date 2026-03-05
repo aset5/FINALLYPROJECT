@@ -5,6 +5,10 @@
   <title>Панель управления ВУЗа</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    .icon-box { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; }
+    .avatar-circle { width: 35px; height: 35px; background: #e9ecef; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+  </style>
 </head>
 <body class="bg-light">
 
@@ -15,7 +19,7 @@
         </span>
     <div class="d-flex align-items-center">
       <span class="text-white me-3" th:text="${user.username}">Username</span>
-      <form th:action="@{/logout}" method="post">
+      <form th:action="@{/logout}" method="post" class="m-0">
         <button type="submit" class="btn btn-outline-light btn-sm">Выйти</button>
       </form>
     </div>
@@ -31,27 +35,59 @@
             <i class="bi bi-building"></i>
           </div>
           <h4 class="fw-bold" th:text="${university != null ? university.name : 'ВУЗ не привязан'}">Название ВУЗа</h4>
-          <p class="text-muted">Официальный представитель</p>
+          <p class="text-muted small">Официальный представитель</p>
           <hr>
           <div class="text-start small">
-            <p><strong>Админ:</strong> <span th:text="${user.fullName}">ФИО</span></p>
-            <p><strong>Email:</strong> <span th:text="${user.email}">email@test.com</span></p>
+            <p class="mb-1"><strong>Админ:</strong> <span th:text="${user.fullName}">ФИО</span></p>
+            <p class="mb-0"><strong>Email:</strong> <span th:text="${user.email}">email@test.com</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3 small text-uppercase text-primary">Новая стажировка</h5>
+          <form th:action="@{/university-admin/add-internship}" method="post">
+            <div class="mb-3">
+              <label class="form-label small">Название</label>
+              <input type="text" name="title" class="form-control form-control-sm" placeholder="Java Developer..." required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Описание</label>
+              <textarea name="description" class="form-control form-control-sm" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Количество мест</label>
+              <input type="number" name="maxPlaces" class="form-control form-control-sm" required min="1">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Опубликовать</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h6 class="fw-bold text-muted small text-uppercase">Наши активные стажировки:</h6>
+        <div th:each="i : ${internships}" class="card mb-2 p-3 shadow-sm border-0 bg-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold small" th:text="${i.title}">Заголовок</span>
+            <span class="badge bg-primary-subtle text-primary rounded-pill" style="font-size: 0.7rem;"
+                  th:text="${i.applications.size() + '/' + i.maxPlaces}">0/10</span>
           </div>
         </div>
       </div>
     </div>
 
     <div class="col-md-8">
-      <div class="row g-4">
+      <div class="row g-4 mb-4">
         <div class="col-sm-6">
           <div class="card border-0 shadow-sm rounded-4 bg-white p-3">
             <div class="d-flex align-items-center">
-              <div class="icon-box bg-info-subtle text-info p-3 rounded-3 me-3">
+              <div class="icon-box bg-info-subtle text-info rounded-3 me-3">
                 <i class="bi bi-people-fill fs-3"></i>
               </div>
               <div>
-                <h6 class="mb-0 text-muted small">Ваши студенты</h6>
-                <h3 class="fw-bold mb-0">124</h3>
+                <h6 class="mb-0 text-muted small">Всего студентов</h6>
+                <h3 class="fw-bold mb-0" th:text="${allApplications.size()}">0</h3>
               </div>
             </div>
           </div>
@@ -59,33 +95,88 @@
         <div class="col-sm-6">
           <div class="card border-0 shadow-sm rounded-4 bg-white p-3">
             <div class="d-flex align-items-center">
-              <div class="icon-box bg-success-subtle text-success p-3 rounded-3 me-3">
+              <div class="icon-box bg-success-subtle text-success rounded-3 me-3">
                 <i class="bi bi-file-earmark-check fs-3"></i>
               </div>
               <div>
-                <h6 class="mb-0 text-muted small">Одобрено заявок</h6>
-                <h3 class="fw-bold mb-0">42</h3>
+                <h6 class="mb-0 text-muted small">Зачислено (AUTO)</h6>
+                <h3 class="fw-bold mb-0" th:text="${allApplications.size()}">0</h3>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="card border-0 shadow-sm rounded-4 mt-4">
-        <div class="card-header bg-white border-0 pt-4 px-4">
-          <h5 class="fw-bold">Управление</h5>
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-0">Все отклики студентов</h5>
+          <i class="bi bi-filter text-muted cursor-pointer"></i>
         </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-uppercase">
+              <tr>
+                <th class="ps-4">Студент</th>
+                <th>Стажировка</th>
+                <th>Дата</th>
+                <th class="text-end pe-4">Статус</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr th:each="app : ${allApplications}">
+                <td class="ps-4">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-circle me-2 text-primary fw-bold">
+                      <i class="bi bi-person"></i>
+                    </div>
+                    <div>
+                      <div class="fw-bold small" th:text="${app.student.fullName ?: app.student.username}">Имя</div>
+                      <div class="text-muted" style="font-size: 0.7rem;" th:text="${app.student.email}">email</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark border fw-normal" th:text="${app.internship.title}">Программа</span>
+                </td>
+                <td class="small text-muted" th:text="${#temporals.format(app.appliedAt, 'dd.MM HH:mm')}">01.01 12:00</td>
+                <td class="text-end pe-4">
+                                        <span class="badge bg-success-subtle text-success px-2 py-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Зачислен
+                                        </span>
+                </td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(allApplications)}">
+                <td colspan="4" class="text-center py-5 text-muted small">
+                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                  Откликов пока нет. Опубликуйте стажировку, чтобы привлечь студентов.
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4 mt-4 mb-5">
         <div class="card-body p-4">
-          <div class="list-group list-group-flush">
-            <a href="#" class="list-group-item list-group-item-action py-3 px-0 border-bottom">
-              <i class="bi bi-person-plus me-2 text-primary"></i> Просмотреть список студентов
-            </a>
-            <a href="#" class="list-group-item list-group-item-action py-3 px-0 border-bottom">
-              <i class="bi bi-briefcase me-2 text-primary"></i> Мониторинг стажировок
-            </a>
-            <a href="#" class="list-group-item list-group-item-action py-3 px-0">
-              <i class="bi bi-gear me-2 text-primary"></i> Настройки профиля ВУЗа
-            </a>
+          <h6 class="fw-bold mb-3 small text-uppercase">Быстрые действия</h6>
+          <div class="row g-2">
+            <div class="col-4">
+              <a href="#" class="btn btn-light btn-sm w-100 py-2 border">
+                <i class="bi bi-download me-1 text-primary"></i> Отчет (CSV)
+              </a>
+            </div>
+            <div class="col-4">
+              <a href="#" class="btn btn-light btn-sm w-100 py-2 border">
+                <i class="bi bi-envelope me-1 text-primary"></i> Рассылка
+              </a>
+            </div>
+            <div class="col-4">
+              <a href="#" class="btn btn-light btn-sm w-100 py-2 border">
+                <i class="bi bi-gear me-1 text-primary"></i> Настройки
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -93,5 +184,6 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

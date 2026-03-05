@@ -3,6 +3,7 @@ package com.example.internship.repositories;
 import com.example.internship.models.Internship;
 import com.example.internship.models.InternshipStatus;
 import com.example.internship.models.Company; // Импортируй модель Company
+import com.example.internship.models.University;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.List;
 @Repository
 public interface InternshipRepository extends JpaRepository<Internship, Long> {
 
+    List<Internship> findByUniversity(University university);
     // Поиск вакансий по ID компании (для CompanyController)
     List<Internship> findByCompanyId(Long companyId);
 
@@ -24,4 +26,8 @@ public interface InternshipRepository extends JpaRepository<Internship, Long> {
     );
     List<Internship> findByTitleContainingIgnoreCaseOrCityContainingIgnoreCase(String title, String city);
 
+    List<Internship> findByUniversityId(Long universityId);
+
+    // Поиск одобренных стажировок конкретного университета
+    List<Internship> findByStatusAndUniversityId(InternshipStatus status, Long universityId);
 }

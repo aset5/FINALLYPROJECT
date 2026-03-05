@@ -4,20 +4,22 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "application")
 public class Application {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "student_id") // Хорошая практика указывать имя колонки явно
     private User student;
 
     @ManyToOne
+    @JoinColumn(name = "internships_id") // Вот здесь связь с твоей таблицей internships
     private Internship internship;
 
     private LocalDateTime appliedAt;
 
-    // ДОБАВЬТЕ ЭТО ПОЛЕ
     @Enumerated(EnumType.STRING)
     private ApplicationStatus status = ApplicationStatus.PENDING;
 

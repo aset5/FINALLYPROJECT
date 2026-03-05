@@ -3,6 +3,7 @@ package com.example.internship.controllers;
 import com.example.internship.models.*;
 import com.example.internship.repositories.*;
 import com.example.internship.services.TelegramBotService;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -54,30 +55,40 @@ public class StudentController {
 
     @PostMapping("/apply/{internshipId}")
     public String apply(@PathVariable Long internshipId, Principal principal, RedirectAttributes redirectAttributes) {
-        Internship internship = internshipRepository.findById(internshipId).orElse(null);
-        User student = userRepository.findByUsername(principal.getName()).orElseThrow();
+        try {
+            // 1. Ищем стажировку
+            Internship internship = internshipRepository.findById(internshipId)
+                    .orElseThrow(() -> new RuntimeException("Стажировка не найдена"));
 
-        if (applicationRepository.existsByStudentAndInternship(student, internship)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликались на эту вакансию!");
-            return "redirect:/";
+            // 2. Ищем студента
+            User student = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("Студент не найден"));
+
+            // 3. Проверка на дубликат
+            if (applicationRepository.existsByStudentAndInternship(student, internship)) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликнулись на эту стажировку.");
+                return "redirect:/";
+            }
+
+            // 4. Создаем отклик с МГНОВЕННЫМ ОДОБРЕНИЕМ
+            Application application = new Application();
+            application.setStudent(student);
+            application.setInternship(internship);
+            application.setAppliedAt(LocalDateTime.now());
+            application.setStatus(ApplicationStatus.APPROVED); // Сразу APPROVED!
+
+            applicationRepository.save(application);
+
+            redirectAttributes.addFlashAttribute("successMessage", "Вы успешно записаны!");
+
+        } catch (Exception e) {
+            // Если база всё еще выдает ошибку, мы увидим её в логах, а юзер получит сообщение
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка базы данных: " + e.getMessage());
         }
 
-        Application app = new Application();
-        app.setStudent(student);
-        app.setInternship(internship);
-        app.setAppliedAt(LocalDateTime.now());
-        applicationRepository.save(app);
-
-        User hr = internship.getCompany().getUser();
-        if (hr.getTelegramChatId() != null) {
-            telegramBotService.sendNotification(hr.getTelegramChatId(),
-                    "⚡️ Новый отклик на вашу вакансию \"" + internship.getTitle() + "\" от студента " + student.getUsername());
-        }
-
-        redirectAttributes.addFlashAttribute("successMessage", "Отклик успешно отправлен!");
-        return "redirect:/?success";
+        return "redirect:/";
     }
-
     @GetMapping("/messages/{internshipId}")
     public String chatPage(@PathVariable Long internshipId, Model model, Principal principal) {
         User me = userRepository.findByUsername(principal.getName()).orElseThrow();
@@ -176,4 +187,6 @@ public class StudentController {
         userRepository.save(user);
         return "redirect:/student/profile?success";
     }
+
+
 }

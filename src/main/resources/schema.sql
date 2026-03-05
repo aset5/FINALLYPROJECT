@@ -7,3 +7,10 @@ ALTER TABLE internship DROP CONSTRAINT IF EXISTS internship_status_check;
 -- Добавляем актуальное ограничение
 ALTER TABLE internship ADD CONSTRAINT internship_status_check
     CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CLOSED'));
+
+-- Если статус — это просто строка с проверкой
+ALTER TABLE application DROP CONSTRAINT IF EXISTS application_status_check;
+
+-- Добавляем новую проверку, включающую APPROVED
+ALTER TABLE application ADD CONSTRAINT application_status_check
+    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'));
