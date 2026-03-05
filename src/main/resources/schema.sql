@@ -14,3 +14,8 @@ ALTER TABLE application DROP CONSTRAINT IF EXISTS application_status_check;
 -- Добавляем новую проверку, включающую APPROVED
 ALTER TABLE application ADD CONSTRAINT application_status_check
     CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'));
+
+ALTER TABLE internships ADD COLUMN study_materials TEXT;
+
+ALTER TABLE internships ADD COLUMN is_job BOOLEAN DEFAULT FALSE;
+ALTER TABLE internships ADD COLUMN study_materials TEXT;

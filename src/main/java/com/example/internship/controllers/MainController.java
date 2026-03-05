@@ -3,6 +3,7 @@ package com.example.internship.controllers;
 import com.example.internship.models.Internship;
 import com.example.internship.models.InternshipStatus;
 import com.example.internship.models.Role;
+import com.example.internship.repositories.ApplicationRepository;
 import com.example.internship.repositories.InternshipRepository;
 import com.example.internship.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,9 @@ public class MainController {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ApplicationRepository applicationRepository;
+
 
     @GetMapping("/")
     public String home(Model model, Principal principal) {
@@ -28,16 +32,22 @@ public class MainController {
             userRepository.findByUsername(principal.getName()).ifPresent(user -> {
                 model.addAttribute("currentUser", user);
 
+                List<Internship> list;
                 if (user.getRole() == Role.STUDENT && user.getUniversity() != null) {
-                    // Студент видит только одобренные стажировки своего ВУЗа
-                    model.addAttribute("internships",
-                            internshipRepository.findByStatusAndUniversityId(
-                                    InternshipStatus.APPROVED, user.getUniversity().getId()
-                            ));
+                    list = internshipRepository.findByStatusAndUniversityId(
+                            InternshipStatus.APPROVED, user.getUniversity().getId());
                 } else {
-                    // Все остальные (или гости) видят все одобренные стажировки
-                    model.addAttribute("internships",
-                            internshipRepository.findByStatus(InternshipStatus.APPROVED));
+                    list = internshipRepository.findByStatus(InternshipStatus.APPROVED);
+                }
+                model.addAttribute("internships", list);
+
+                // ДОБАВЛЕНО: Список ID стажировок, на которые студент уже откликнулся
+                if (user.getRole() == Role.STUDENT) {
+                    List<Long> appliedIds = applicationRepository.findByStudent(user)
+                            .stream()
+                            .map(app -> app.getInternship().getId())
+                            .toList();
+                    model.addAttribute("appliedIds", appliedIds);
                 }
             });
         } else {

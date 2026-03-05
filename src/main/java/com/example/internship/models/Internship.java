@@ -16,6 +16,10 @@ public class Internship {
     private String city;
 
     @Column(columnDefinition = "TEXT")
+    private String studyMaterials;
+    // В модели Internship.java
+    private boolean isJob = false; // true - если это вакансия компании, false - если стажировка вуза
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     // Оставляем один статус. По умолчанию — PENDING.

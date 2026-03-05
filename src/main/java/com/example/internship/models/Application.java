@@ -21,7 +21,7 @@ public class Application {
     private LocalDateTime appliedAt;
 
     @Enumerated(EnumType.STRING)
-    private ApplicationStatus status = ApplicationStatus.PENDING;
+    private ApplicationStatus status;
 
     // Геттеры и сеттеры
     public Long getId() { return id; }

@@ -51,24 +51,18 @@ public class UniversityAdminController {
         return "university/dashboard";
     }
 
-    @PostMapping("/add-internship") // Убедись, что в HTML форме action="/university-admin/add-internship"
+    @PostMapping("/add-internship")
     public String addInternship(@ModelAttribute Internship internship, Principal principal) {
-        // 1. Находим текущего представителя ВУЗа
-        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
-        // 2. Привязываем стажировку к его университету
         internship.setUniversity(user.getUniversity());
-
-        // 3. Устанавливаем статус PENDING (На модерации)
-        // Теперь она не появится у студентов, пока ГЛАВНЫЙ АДМИН ее не одобрит
         internship.setStatus(InternshipStatus.PENDING);
 
-        // 4. Сохраняем
         internshipRepository.save(internship);
 
-        // Редирект обратно на дашборд с сообщением об успехе
-        return "redirect:/university-admin/dashboard?sentForModeration";
-    }
+        // ИСПРАВЛЕНО: добавляем префикс -admin
+        return "redirect:/university-admin/dashboard";    }
 
 
 }

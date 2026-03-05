@@ -1,21 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Мои Отклики</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
-<body>
-<tr th:each="app : ${applications}">
-  <td th:text="${app.internship.title}">Название вакансии</td>
-  <td>
-        <span class="badge" th:classappend="${app.status.name() == 'ACCEPTED' ? 'bg-success' : 'bg-warning'}"
+<body class="bg-light p-5">
+
+<div class="container">
+    <h2 class="mb-4">Мои программы обучения и отклики</h2>
+
+    <table class="table table-white shadow-sm rounded bg-white overflow-hidden">
+        <thead class="table-dark">
+        <tr>
+            <th>Программа / Стажировка</th>
+            <th>Статус</th>
+            <th style="width: 300px;">Действие</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="app : ${applications}">
+            <td class="fw-bold" th:text="${app.internship.title}">Название</td>
+            <td>
+        <span class="badge"
+              th:classappend="${app.status.name() == 'COMPLETED' ? 'bg-success' : (app.status.name() == 'APPROVED' ? 'bg-info' : 'bg-warning')}"
               th:text="${app.status}">Статус</span>
-  </td>
-  <td>
-    <a th:href="@{'/student/messages/' + ${app.internship.id}}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-chat-dots"></i> Написать компании
-    </a>
-  </td>
-</tr>
+            </td>
+            <td>
+                <div class="d-flex gap-2">
+                    <a th:href="@{'/student/learning/' + ${app.id}}" class="btn btn-primary btn-sm d-flex align-items-center">
+                        <i class="bi bi-book me-1"></i> Обучение
+                    </a>
+
+                    <a th:if="${app.status.name() == 'APPROVED'}" th:href="@{'/student/test/' + ${app.id}}" class="btn btn-outline-primary btn-sm">
+                        Тест
+                    </a>
+
+                    <a th:if="${app.status.name() == 'COMPLETED'}" th:href="@{/student/job-market}" class="btn btn-success btn-sm">
+                        <i class="bi bi-briefcase me-1"></i> Вакансии
+                    </a>
+                </div>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(myApplications)}">
+            <td colspan="3" class="text-center py-4 text-muted">Вы еще не откликнулись ни на одну программу.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
 </body>
 </html>

@@ -1,6 +1,7 @@
 package com.example.internship.repositories;
 
 import com.example.internship.models.Application;
+import com.example.internship.models.ApplicationStatus;
 import com.example.internship.models.Internship;
 import com.example.internship.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,5 +19,8 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     void deleteByInternshipId(Long internshipId);
     boolean existsByStudentAndInternship(User student, Internship internship);
     long countByInternship(Internship internship);
+    boolean existsByStudentAndStatus(User student, ApplicationStatus status);
+
+    // Также тебе пригодятся эти методы (если их еще нет):
 
 }

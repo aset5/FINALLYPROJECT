@@ -49,10 +49,16 @@ public class StudentController {
     public String showMyApps(Model model, Principal principal) {
         User student = userRepository.findByUsername(principal.getName()).orElseThrow();
         List<Application> apps = applicationRepository.findByStudent(student);
+
+        // ИМЯ ДОЛЖНО БЫТЬ ТАКИМ ЖЕ, КАК В HTML (myApplications)
         model.addAttribute("myApplications", apps);
+
+        // Для надежности, чтобы работал цикл th:each="app : ${applications}",
+        // лучше оставить и второе имя, либо в HTML везде заменить на myApplications
+        model.addAttribute("applications", apps);
+
         return "student/application";
     }
-
     @PostMapping("/apply/{internshipId}")
     public String apply(@PathVariable Long internshipId, Principal principal, RedirectAttributes redirectAttributes) {
         try {
@@ -186,6 +192,48 @@ public class StudentController {
 
         userRepository.save(user);
         return "redirect:/student/profile?success";
+    }
+
+    @PostMapping("/student/complete-training/{appId}")
+    public String completeTraining(@PathVariable Long appId) {
+        Application app = applicationRepository.findById(appId).orElseThrow();
+
+        // После прохождения теста меняем статус
+        app.setStatus(ApplicationStatus.COMPLETED);
+        applicationRepository.save(app);
+
+        return "redirect:/student/my-applications?finished";
+    }
+
+
+
+    @GetMapping("/learning/{id}") // Проверь, чтобы путь в ссылке и тут совпадал
+    public String showLearningPage(@PathVariable("id") Long id, Model model) {
+        // 1. Извлекаем из базы
+        Application application = applicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
+
+        // 2. Печатаем в консоль для проверки (посмотри в терминал IDEA после клика)
+        System.out.println("DEBUG: Загружаем страницу для заявки ID: " + application.getId());
+
+        // 3. ПЕРЕДАЕМ В МОДЕЛЬ (Ключевой момент!)
+        // В кавычках должно быть ПУЛЯ В ПУЛЮ как в HTML
+        model.addAttribute("application", application);
+        model.addAttribute("internship", application.getInternship());
+
+        return "student/learning";
+    }
+
+    @PostMapping("/complete-learning/{appId}")
+    public String completeLearning(@PathVariable Long appId) {
+        Application app = applicationRepository.findById(appId).orElseThrow();
+
+        // Меняем статус на COMPLETED
+        app.setStatus(ApplicationStatus.COMPLETED);
+        applicationRepository.save(app);
+
+        // Перенаправляем в кабинет, где теперь будет доступна кнопка вакансий
+        return "redirect:/student/my-applications?success=completed";
     }
 
 
