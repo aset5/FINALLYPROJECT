@@ -1,8 +1,10 @@
 package com.example.internship.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank; // ОСЫЛАРДЫ ТЕКСЕР
+import jakarta.validation.constraints.Pattern;  // ОСЫЛАРДЫ ТЕКСЕР
+import jakarta.validation.constraints.Size;
 import lombok.Data;
-import java.util.List;
 
 @Entity
 @Data
@@ -15,7 +17,14 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
+    private boolean enabled = false; // Почта расталғанша жүйеге кіре алмайды
+    private String verificationCode; // UUID түріндегі бірегей код
+
     @Column(nullable = false)
+    @NotBlank(message = "Құпия сөз бос болмауы керек")
+    @Size(min = 8, message = "Құпия сөз кемінде 8 символдан тұруы керек")
+    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$",
+            message = "Құпия сөзде кемінде бір бас әріп, бір кіші әріп, бір цифр және бір арнайы символ болуы қажет")
     private String password;
 
     @ManyToOne // Один университет может иметь несколько админов

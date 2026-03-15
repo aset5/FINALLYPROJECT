@@ -35,3 +35,6 @@ ALTER TABLE application DROP CONSTRAINT IF EXISTS application_status_check;
 -- 2. Жаңа рұқсат етілген статустар тізімін қосамыз (ACCEPTED-ті қоса алғанда)
 ALTER TABLE application ADD CONSTRAINT application_status_check
     CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'VERIFIED', 'ENROLLED', 'ACCEPTED', 'COMPLETED'));
+
+ALTER TABLE users ADD COLUMN enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN verification_code VARCHAR(255);
