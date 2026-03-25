@@ -104,16 +104,5 @@ public class AuthController {
     }
 
     // 5. Поштадағы сілтемені басқанда осы әдіс жұмыс істейді
-    @GetMapping("/verify")
-    public String verifyUser(@RequestParam("code") String code) {
-        User user = userRepository.findByVerificationCode(code);
-        if (user != null) {
-            user.setEnabled(true);
-            user.setVerificationCode(null); // Кодты бір рет қана қолдану үшін
-            userRepository.save(user);
-            return "redirect:/login?verified";
-        } else {
-            return "redirect:/login?error";
-        }
-    }
+
 }
