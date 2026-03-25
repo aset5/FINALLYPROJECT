@@ -70,38 +70,60 @@ public class StudentController {
         return "student/application";
     }
     @PostMapping("/apply/{internshipId}")
+    @Transactional
     public String apply(@PathVariable Long internshipId, Principal principal, RedirectAttributes redirectAttributes) {
         try {
+            // 1. Стажировка мен Студентті базадан табу
             Internship internship = internshipRepository.findById(internshipId)
                     .orElseThrow(() -> new RuntimeException("Стажировка не найдена"));
             User student = userRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("Студент не найден"));
 
+            // 2. Студенттің бұрын өтінім бергенін тексеру
             if (applicationRepository.existsByStudentAndInternship(student, internship)) {
-                redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликнулись.");
-                return "redirect:/";
+                redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликнулись на эту позицию.");
+                return "redirect:/student/my-applications";
             }
 
+            // 3. БОС ОРЫНДЫ ТЕКСЕРУ (ЛИМИТ)
+            // Модельдегі maxPlaces және біз қосқан joinedCount-ты қолданамыз
+            // 3. БОС ОРЫНДЫ ТЕКСЕРУ
+// getJoinedCount() және getMaxPlaces() әдістерін қолданамыз
+            if (internship.getJoinedCount() >= internship.getMaxPlaces()) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Кешіріңіз, бос орын таусылды!");
+                return "redirect:/student/my-applications";
+            }
+
+            // 4. Өтінімді жасау
             Application application = new Application();
             application.setStudent(student);
             application.setInternship(internship);
             application.setAppliedAt(LocalDateTime.now());
 
-            // ЛОГИКА ОСЫ ЖЕРДЕ:
             if (internship.getUniversity() != null) {
-                // Егер бұл Университет бағдарламасы болса - БІРДЕН МАҚҰЛДАУ
+                // Университет бағдарламасы болса - БІРДЕН МАҚҰЛДАУ
                 application.setStatus(ApplicationStatus.APPROVED);
+
+                // Орын санын 1-ге арттырып, базаға сақтау
+                internship.setJoinedCount(internship.getJoinedCount() + 1);
+                internshipRepository.save(internship);
+
                 redirectAttributes.addFlashAttribute("successMessage", "Вы успешно записаны на обучение!");
             } else {
-                // Егер бұл Компания болса - КҮТУ (PENDING)
+                // Компания болса - КҮТУ (PENDING) статусы
                 application.setStatus(ApplicationStatus.PENDING);
                 redirectAttributes.addFlashAttribute("successMessage", "Отклик отправлен. Ожидайте одобрения компании.");
             }
 
+            // 5. Өтінімді сақтау
             applicationRepository.save(application);
+
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка: " + e.getMessage());
+            // Қате болса консольге шығару (отладка үшін)
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка при подаче заявки: " + e.getMessage());
         }
+
         return "redirect:/student/my-applications";
     }
     @GetMapping("/messages/{internshipId}")

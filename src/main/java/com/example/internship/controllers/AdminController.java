@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -110,6 +111,23 @@ public class AdminController {
         }
 
         userRepository.delete(user);
+        return "redirect:/admin/users";
+    }
+
+    @PostMapping("/users/update-username")
+    public String updateUsername(@RequestParam Long userId,
+                                 @RequestParam String newUsername,
+                                 RedirectAttributes redirectAttributes) {
+        User user = userRepository.findById(userId).orElseThrow();
+
+        // Логин бос емес пе және базада бар ма?
+        if (userRepository.existsByUsername(newUsername)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка: Логин '" + newUsername + "' уже занят!");
+        } else {
+            user.setUsername(newUsername);
+            userRepository.save(user);
+            redirectAttributes.addFlashAttribute("successMessage", "Логин пользователя #" + userId + " успешно изменен.");
+        }
         return "redirect:/admin/users";
     }
 }

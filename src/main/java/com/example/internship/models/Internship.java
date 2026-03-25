@@ -17,32 +17,35 @@ public class Internship {
 
     @Column(columnDefinition = "TEXT")
     private String studyMaterials;
-    // В модели Internship.java
-    private boolean isJob = false; // true - если это вакансия компании, false - если стажировка вуза
+
+    private boolean isJob = false;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    // Оставляем один статус. По умолчанию — PENDING.
     @Enumerated(EnumType.STRING)
     private InternshipStatus status = InternshipStatus.PENDING;
 
-    // Связь с Университетом (кто курирует/создал сейчас)
     @ManyToOne
     @JoinColumn(name = "university_id")
     private University university;
 
-    // Связь с Компанией (оставляем для будущего трудоустройства)
     @ManyToOne
     @JoinColumn(name = "company_id")
     private Company company;
 
-    // Список заявок студентов
     @OneToMany(mappedBy = "internship", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Application> applications;
 
+    // Орын санының шектеуі
     private int maxPlaces = 0;
 
+    // Қазіргі қабылданғандар саны
+    @Column(name = "joined_count")
+    private int joinedCount = 0;
+
+    // Орын бар-жоғын тексеретін БІР ҒАНА әдіс қалдырамыз
     public boolean hasAvailablePlaces() {
-        return applications == null || applications.size() < maxPlaces;
+        return joinedCount < maxPlaces;
     }
 }
