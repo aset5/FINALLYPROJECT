@@ -52,7 +52,6 @@ public class CompanyController {
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ДОБАВЬ ЭТУ СТРОКУ, чтобы кнопка Telegram работала
         model.addAttribute("user", user);
 
         Company company = companyRepository.findByUserId(user.getId());
@@ -116,11 +115,9 @@ public class CompanyController {
     public String acceptApplication(@PathVariable Long id) {
         Application app = applicationRepository.findById(id).orElseThrow();
 
-        // Статусты бірізділікке келтіреміз (мысалы, ACCEPTED)
         app.setStatus(ApplicationStatus.ACCEPTED);
         applicationRepository.save(app);
 
-        // Студентке чат ашылғаны туралы хабарлама жіберу
         if (app.getStudent().getTelegramChatId() != null) {
             telegramBotService.sendNotification(app.getStudent().getTelegramChatId(),
                     "✅ Компания сіздің өтініміңізді қабылдады! Енді чат арқылы сөйлесе аласыз.");
@@ -158,12 +155,10 @@ public class CompanyController {
                               @RequestParam String content,
                               Principal principal) {
 
-        // 1. Загружаем данные из базы
         User me = userRepository.findByUsername(principal.getName()).orElseThrow();
         User receiver = userRepository.findById(receiverId).orElseThrow();
         Internship internship = internshipRepository.findById(internshipId).orElseThrow();
 
-        // 2. Создаем и сохраняем сообщение в БД
         Message msg = new Message();
         msg.setSender(me);
         msg.setReceiver(receiver);
@@ -172,13 +167,11 @@ public class CompanyController {
         msg.setSentAt(LocalDateTime.now());
         messageRepository.save(msg);
 
-        // 3. ОТЛАДКА: Выводим статус в консоль IDEA
         System.out.println("=== DEBUG TELEGRAM NOTIFICATION ===");
         System.out.println("Отправитель: " + me.getUsername());
         System.out.println("Получатель: " + receiver.getUsername());
         System.out.println("Telegram Chat ID получателя: " + receiver.getTelegramChatId());
 
-        // 4. Проверка и отправка уведомления
         if (receiver.getTelegramChatId() != null) {
             try {
                 telegramBotService.sendNotification(receiver.getTelegramChatId(),
@@ -204,13 +197,13 @@ public class CompanyController {
         User student = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Студент не найден"));
         model.addAttribute("student", student);
-        return "company/student-view"; // Проблема может быть здесь
+        return "company/student-view";
     }
 
     @PostMapping("/internships/{id}/close")
     public String closeInternship(@PathVariable Long id) {
         Internship internship = internshipRepository.findById(id).orElseThrow();
-        internship.setStatus(InternshipStatus.CLOSED); // Убедись, что в Enum есть CLOSED
+        internship.setStatus(InternshipStatus.CLOSED);
         internshipRepository.save(internship);
         return "redirect:/company/dashboard";
     }
@@ -218,7 +211,7 @@ public class CompanyController {
     @PostMapping("/internships/{id}/reopen")
     public String reopenInternship(@PathVariable Long id) {
         Internship internship = internshipRepository.findById(id).orElseThrow();
-        internship.setStatus(InternshipStatus.APPROVED); // Возвращаем в активные
+        internship.setStatus(InternshipStatus.APPROVED);
         internshipRepository.save(internship);
         return "redirect:/company/dashboard";
     }
@@ -228,10 +221,9 @@ public class CompanyController {
         Internship internship = internshipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Вакансия не найдена"));
         model.addAttribute("internship", internship);
-        return "company/edit-internship"; // Убедись, что такой HTML-файл есть
+        return "company/edit-internship";
     }
 
-    // 2. Сохранить изменения
     @PostMapping("/internships/edit/{id}")
     public String updateInternship(@PathVariable Long id, @ModelAttribute Internship updatedInternship) {
         Internship existing = internshipRepository.findById(id).orElseThrow();
@@ -240,7 +232,6 @@ public class CompanyController {
         existing.setCity(updatedInternship.getCity());
         existing.setDescription(updatedInternship.getDescription());
 
-        // После редактирования вакансия обычно уходит на повторную модерацию
         existing.setStatus(InternshipStatus.PENDING);
 
         internshipRepository.save(existing);
@@ -268,7 +259,7 @@ public class CompanyController {
     @GetMapping("/student/{id}")
     public String viewStudent(@PathVariable Long id, Model model) {
         User student = userRepository.findById(id).orElseThrow();
-        model.addAttribute("student", student); // Передаем объект как "student"
+        model.addAttribute("student", student);
         return "company/student-view";
     }
 
@@ -277,12 +268,11 @@ public class CompanyController {
         Application app = applicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Өтінім табылмады"));
 
-        // Компания мақұлдаған кезде ғана статус өзгереді
-// ACCEPTED орнына APPROVED қолданып көр
+
         app.setStatus(ApplicationStatus.APPROVED);
         applicationRepository.save(app);
 
         ra.addFlashAttribute("successMessage", "Студент сәтті қабылданды!");
-        return "redirect:/company/dashboard"; // Компанияның басты бетіне қайту
+        return "redirect:/company/dashboard";
     }
 }

@@ -24,7 +24,6 @@ public class Message {
     private LocalDateTime sentAt = LocalDateTime.now();
 
     @ManyToOne
-    private Internship internship; // Привязка к вакансии, чтобы понимать контекст
+    private Internship internship;
 
-    // Геттеры и сеттеры
 }

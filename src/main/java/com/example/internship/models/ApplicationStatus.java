@@ -2,11 +2,11 @@ package com.example.internship.models;
 
 
 public enum ApplicationStatus {
-    PENDING,    // Ожидание ответа от компании
+    PENDING,
     ACCEPTED,
     APPROVED,
-    IN_PROGRESS,// В процессе обучения/тестирования
+    IN_PROGRESS,
     COMPLETED,
-    VERIFIED,// Сразу используем этот// Студент одобрен (оффер/интервью)
-    REJECTED    // Отказ
+    VERIFIED,
+    REJECTED
 }

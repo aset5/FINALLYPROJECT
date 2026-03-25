@@ -36,11 +36,9 @@ public class TelegramNotificationBot extends TelegramLongPollingBot {
             String messageText = update.getMessage().getText();
             Long chatId = update.getMessage().getChatId();
 
-            // ЛОГ В КОНСОЛЬ: Мы увидим, что именно пришло от Телеграма
             System.out.println("СООБЩЕНИЕ ОТ ТГ: " + messageText + " | ChatID: " + chatId);
 
             if (messageText.startsWith("/start")) {
-                // Если команда пришла с ID (например /start user_5)
                 if (messageText.contains("user_")) {
                     try {
                         String userIdStr = messageText.split("user_")[1];
@@ -50,7 +48,6 @@ public class TelegramNotificationBot extends TelegramLongPollingBot {
                             user.setTelegramChatId(chatId);
                             userRepository.save(user);
 
-                            // Ответ пользователю в Телеграм
                             sendNotification(chatId, "✅ Успешно! Аккаунт " + user.getUsername() + " привязан.");
                             System.out.println("ПРИВЯЗКА УСПЕШНА: " + user.getUsername());
                         });
@@ -58,7 +55,6 @@ public class TelegramNotificationBot extends TelegramLongPollingBot {
                         sendNotification(chatId, "❌ Ошибка формата ID.");
                     }
                 } else {
-                    // Если просто нажали Старт без ссылки
                     sendNotification(chatId, "Привет! Пожалуйста, подключите уведомления через личный кабинет на сайте INTERN.PRO.");
                 }
             }
@@ -67,7 +63,6 @@ public class TelegramNotificationBot extends TelegramLongPollingBot {
 
     private void handleStartCommand(String messageText, Long chatId) {
         try {
-            // Ожидаем формат /start user_123
             if (messageText.contains("user_")) {
                 String payload = messageText.split("user_")[1];
                 Long userId = Long.parseLong(payload);

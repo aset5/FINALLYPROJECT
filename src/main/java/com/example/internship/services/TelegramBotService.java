@@ -31,12 +31,10 @@ public class TelegramBotService extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        // ПРОВЕРКА: есть ли сообщение и текст
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             Long chatId = update.getMessage().getChatId();
 
-            // Логика обработки команды /start с параметром
             if (messageText.startsWith("/start")) {
                 handleStartCommand(messageText, chatId);
             }
@@ -45,13 +43,11 @@ public class TelegramBotService extends TelegramLongPollingBot {
 
     private void handleStartCommand(String messageText, Long chatId) {
         try {
-            // Извлекаем "user_123"
             String payload = messageText.replace("/start ", "").trim();
 
             if (payload.startsWith("user_")) {
                 Long userId = Long.parseLong(payload.replace("user_", ""));
 
-                // Находим пользователя и сохраняем его Chat ID
                 userRepository.findById(userId).ifPresent(user -> {
                     user.setTelegramChatId(chatId);
                     userRepository.save(user);
@@ -66,7 +62,6 @@ public class TelegramBotService extends TelegramLongPollingBot {
         }
     }
 
-    // Универсальный метод для отправки сообщений
     public void sendNotification(Long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());

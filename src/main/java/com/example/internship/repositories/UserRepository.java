@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-    // Находит пользователя по логину (используется при авторизации)
     Optional<User> findByUsername(String username);
     List<User> findByUsernameContainingIgnoreCase(String username);
     boolean existsByUsername(String username);

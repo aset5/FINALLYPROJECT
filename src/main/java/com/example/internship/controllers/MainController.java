@@ -27,7 +27,6 @@ public class MainController {
 
     @GetMapping("/")
     public String index(Model model, Principal principal) {
-        // 1. Жүйеге кірген қолданушыны анықтау
         User user = null;
         boolean isVerified = false;
         Long studentUniId = null;
@@ -35,31 +34,26 @@ public class MainController {
         if (principal != null) {
             user = userRepository.findByUsername(principal.getName()).orElse(null);
             if (user != null) {
-                // Студенттің статусын тексеру
                 isVerified = applicationRepository.existsByStudentIdAndStatus(user.getId(), ApplicationStatus.VERIFIED);
-                // Студенттің университетін анықтау
                 if (user.getUniversity() != null) {
                     studentUniId = user.getUniversity().getId();
                 }
             }
         }
 
-        // 2. Университет бағдарламаларын фильтрлеу
-        // ТЕК студент оқитын университеттің бағдарламаларын көрсету
-        final Long finalStudentUniId = studentUniId; // lambda үшін
+
+        final Long finalStudentUniId = studentUniId;
         List<Internship> universityPrograms = internshipRepository.findAll().stream()
                 .filter(i -> i.getUniversity() != null)
                 .filter(i -> i.getStatus() == InternshipStatus.APPROVED)
                 .filter(i -> finalStudentUniId != null && i.getUniversity().getId().equals(finalStudentUniId))
                 .collect(Collectors.toList());
 
-        // 3. Компания вакансиялары (барлығына ортақ, бірақ көру үшін isVerified керек болады HTML-де)
         List<Internship> companyJobs = internshipRepository.findAll().stream()
                 .filter(i -> i.getCompany() != null)
                 .filter(i -> i.getStatus() == InternshipStatus.APPROVED)
                 .collect(Collectors.toList());
 
-        // Модельге мәліметтерді қосу
         model.addAttribute("uniPrograms", universityPrograms);
         model.addAttribute("companyJobs", companyJobs);
         model.addAttribute("isVerified", isVerified);

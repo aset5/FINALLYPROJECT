@@ -12,10 +12,8 @@ import java.util.List;
 public interface InternshipRepository extends JpaRepository<Internship, Long> {
 
     List<Internship> findByUniversity(University university);
-    // Поиск вакансий по ID компании (для CompanyController)
     List<Internship> findByCompanyId(Long companyId);
 
-    // Поиск и удаление по объекту Company (вместо Object)
     List<Internship> findByCompany(Company company);
     void deleteByCompany(Company company);
 
@@ -30,6 +28,5 @@ public interface InternshipRepository extends JpaRepository<Internship, Long> {
 
     List<Internship> findByUniversityId(Long universityId);
 
-    // Поиск одобренных стажировок конкретного университета
     List<Internship> findByStatusAndUniversityId(InternshipStatus status, Long universityId);
 }

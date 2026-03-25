@@ -11,11 +11,11 @@ public class Application {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "student_id") // Хорошая практика указывать имя колонки явно
+    @JoinColumn(name = "student_id")
     private User student;
 
     @ManyToOne
-    @JoinColumn(name = "internships_id") // Вот здесь связь с твоей таблицей internships
+    @JoinColumn(name = "internships_id")
     private Internship internship;
 
     private LocalDateTime appliedAt;
@@ -23,7 +23,6 @@ public class Application {
     @Enumerated(EnumType.STRING)
     private ApplicationStatus status;
 
-    // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -36,7 +35,6 @@ public class Application {
     public LocalDateTime getAppliedAt() { return appliedAt; }
     public void setAppliedAt(LocalDateTime appliedAt) { this.appliedAt = appliedAt; }
 
-    // ОБЯЗАТЕЛЬНО ДОБАВЬТЕ ЭТИ МЕТОДЫ
     public ApplicationStatus getStatus() { return status; }
     public void setStatus(ApplicationStatus status) { this.status = status; }
 }

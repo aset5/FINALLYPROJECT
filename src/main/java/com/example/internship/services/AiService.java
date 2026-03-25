@@ -9,7 +9,7 @@ import java.util.*;
 @Service
 public class AiService {
 
-    @Value("${deepseek.api.key}") // Енді бұл Spring-тен келеді
+    @Value("${deepseek.api.key}")
     private String deepseekApiKey;
 
     public String generateResponse(String prompt) {
@@ -17,7 +17,6 @@ public class AiService {
             RestTemplate rt = new RestTemplate();
             String url = "https://api.deepseek.com/chat/completions";
 
-            // DeepSeek форматы: "model" және "messages" тізімі
             Map<String, Object> requestBody = Map.of(
                     "model", "deepseek-chat",
                     "messages", List.of(
@@ -28,7 +27,7 @@ public class AiService {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(deepseekApiKey); // API кілт "Authorization: Bearer ..." түрінде жіберіледі
+            headers.setBearerAuth(deepseekApiKey);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 

@@ -19,7 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        // Важно: здесь мы гарантируем, что роль будет иметь префикс ROLE_
         String roleWithPrefix = user.getRole().name().startsWith("ROLE_")
                 ? user.getRole().name()
                 : "ROLE_" + user.getRole().name();

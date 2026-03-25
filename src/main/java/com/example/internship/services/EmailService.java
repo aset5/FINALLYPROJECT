@@ -16,7 +16,6 @@ public class EmailService {
 
     public void sendVerificationEmail(String to, String code) throws MessagingException {
         String subject = "Тіркелуді растау";
-        // Мына сілтеме localhost-та жұмыс істейді
         String verifyURL = "http://localhost:8080/verify?code=" + code;
 
         String content = "<h3>Құрметті пайдаланушы!</h3>"

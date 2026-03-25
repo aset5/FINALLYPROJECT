@@ -32,7 +32,7 @@ public class AuthController {
     private UniversityRepository universityRepository;
 
     @Autowired
-    private EmailService emailService; // Хат жіберу үшін
+    private EmailService emailService;
 
     @GetMapping("/login")
     public String login() {
@@ -65,15 +65,12 @@ public class AuthController {
             return "register";
         }
 
-        // 1. Құпия сөзді шифрлау
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        // 2. Растау кодын жасау және аккаунтты уақытша жабу
         String token = UUID.randomUUID().toString();
         user.setVerificationCode(token);
         user.setEnabled(false);
 
-        // 3. Рөлдер мен Университет логикасы
         if ("UNIVERSITY".equalsIgnoreCase(roleType)) {
             user.setRole(Role.UNIVERSITY_ADMIN);
             if (uniName != null && !uniName.trim().isEmpty()) {
@@ -93,7 +90,6 @@ public class AuthController {
 
         try {
             userRepository.save(user);
-            // 4. Пайдаланушыға хат жіберу
             emailService.sendVerificationEmail(user.getEmail(), token);
         } catch (Exception e) {
             model.addAttribute("error", "Хат жіберу кезінде техникалық қате шықты: " + e.getMessage());
@@ -103,6 +99,5 @@ public class AuthController {
         return "redirect:/login?sent";
     }
 
-    // 5. Поштадағы сілтемені басқанда осы әдіс жұмыс істейді
 
 }

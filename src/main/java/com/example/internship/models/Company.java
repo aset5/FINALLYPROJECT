@@ -11,10 +11,10 @@ public class Company {
     private Long id;
 
     private String name;
-    private String bin; // Бизнес-идентификационный номер
+    private String bin;
 
     @OneToOne
     @JoinColumn(name = "user_id")
-    private User user; // Связь с логином/паролем
+    private User user;
 
 }

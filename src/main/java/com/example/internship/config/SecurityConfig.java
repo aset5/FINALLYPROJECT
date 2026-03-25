@@ -36,7 +36,6 @@ public class SecurityConfig {
                                     .map(r -> r.getAuthority())
                                     .toList();
 
-                            // Лог в консоль для отладки
                             System.out.println("User " + authentication.getName() + " logged in with roles: " + roles);
 
                             if (roles.contains("ROLE_UNIVERSITY_ADMIN")) {

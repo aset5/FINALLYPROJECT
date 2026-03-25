@@ -16,7 +16,6 @@ public class AiController {
 
     @GetMapping("/chat")
     public String chat(@RequestParam String message) {
-        // ПОРТАЛДЫҢ БАЗАЛЫҚ БІЛІМІ (FAQ)
         String portalKnowledge =
                 "Сен INTERN.PRO порталының ресми көмекшісісің. Төмендегі ережелерге сүйеніп қана жауап бер:\n" +
                         "1. Тіркелу: Студенттер мен компаниялар ЭЦП (keys.p12) арқылы немесе eGov Mobile арқылы тіркеле алады.\n" +

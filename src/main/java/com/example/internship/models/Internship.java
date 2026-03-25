@@ -37,14 +37,11 @@ public class Internship {
     @OneToMany(mappedBy = "internship", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Application> applications;
 
-    // Орын санының шектеуі
     private int maxPlaces = 0;
 
-    // Қазіргі қабылданғандар саны
     @Column(name = "joined_count")
     private int joinedCount = 0;
 
-    // Орын бар-жоғын тексеретін БІР ҒАНА әдіс қалдырамыз
     public boolean hasAvailablePlaces() {
         return joinedCount < maxPlaces;
     }

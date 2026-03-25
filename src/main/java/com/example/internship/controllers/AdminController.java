@@ -34,7 +34,6 @@ public class AdminController {
         this.messageRepository = messageRepository;
     }
 
-    // --- УПРАВЛЕНИЕ СТАЖИРОВКАМИ ---
 
     @GetMapping("/dashboard")
     public String adminDashboard(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
@@ -46,7 +45,6 @@ public class AdminController {
             internships = internshipRepository.findAll();
         }
         model.addAttribute("allInternships", internships);
-        // Добавляем также список на модерацию, чтобы видеть всё на одной странице
         model.addAttribute("pendingInternships", internshipRepository.findByStatus(InternshipStatus.PENDING));
         return "admin/dashboard";
     }
@@ -54,7 +52,6 @@ public class AdminController {
     @GetMapping("/moderation")
     public String showModerationList(Model model) {
         model.addAttribute("pendingInternships", internshipRepository.findByStatus(InternshipStatus.PENDING));
-        // Можно использовать отдельный шаблон или тот же dashboard
         return "admin/dashboard";
     }
 
@@ -76,7 +73,6 @@ public class AdminController {
         return "redirect:/admin/dashboard";
     }
 
-    // --- УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ---
 
     @GetMapping("/users")
     public String listUsers(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
@@ -120,7 +116,6 @@ public class AdminController {
                                  RedirectAttributes redirectAttributes) {
         User user = userRepository.findById(userId).orElseThrow();
 
-        // Логин бос емес пе және базада бар ма?
         if (userRepository.existsByUsername(newUsername)) {
             redirectAttributes.addFlashAttribute("errorMessage", "Ошибка: Логин '" + newUsername + "' уже занят!");
         } else {
