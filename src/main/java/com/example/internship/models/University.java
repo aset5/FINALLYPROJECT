@@ -17,4 +17,10 @@ public class University {
 
     @OneToMany(mappedBy = "university")
     private List<User> admins;
+
+    @OneToOne // немесе @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+
 }

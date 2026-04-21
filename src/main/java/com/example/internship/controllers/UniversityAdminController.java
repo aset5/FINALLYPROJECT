@@ -1,5 +1,6 @@
 package com.example.internship.controllers;
 
+import com.example.internship.models.User;
 import com.example.internship.models.*;
 import com.example.internship.repositories.ApplicationRepository;
 import com.example.internship.repositories.InternshipRepository;
@@ -9,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.internship.models.User;
 import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,18 +54,28 @@ public class UniversityAdminController {
     }
 
     // Жаңа стажировка қосу (Оқу материалдарымен бірге)
+// Жаңа стажировка қосу (Оқу материалдарымен бірге)
+// Жаңа стажировка қосу (Оқу материалдарымен бірге)
     @PostMapping("/add-internship")
-    public String addInternship(@ModelAttribute Internship internship, Principal principal) {
+    public String addInternship(@ModelAttribute Internship internship,
+                                @RequestParam("studyMaterials") String studyMaterials,
+                                Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+                .orElseThrow(() -> new RuntimeException("Пайдаланушы табылмады"));
 
-        internship.setUniversity(user.getUniversity());
+        University university = user.getUniversity();
 
-        // МАҢЫЗДЫ: Статус күту режимінде қалады
+        if (university == null) {
+            return "redirect:/university-admin/dashboard?error=no_university";
+        }
+
+        internship.setUniversity(university);
+        // Модерацияға жіберу үшін статус КҮТУДЕ болуы шарт
         internship.setStatus(InternshipStatus.PENDING);
+        internship.setStudyMaterials(studyMaterials);
 
         internshipRepository.save(internship);
-        return "redirect:/university-admin/dashboard?status=pending";
+        return "redirect:/university-admin/dashboard?message=sent_to_moderation";
     }
 
     // Өңдеу бетіне өту
@@ -105,5 +116,12 @@ public class UniversityAdminController {
         applicationRepository.save(app);
 
         return "redirect:/university-admin/dashboard?success=verified";
+    }
+
+    @PostMapping("/university/internships/save")
+    public String saveInternship(@ModelAttribute("internship") Internship internship) {
+        // internship.getStudyMaterials() ішінде формада жазылған мәтін келеді
+        internshipRepository.save(internship);
+        return "redirect:/university/internships";
     }
 }

@@ -230,16 +230,24 @@ public class StudentController {
 
 
     @GetMapping("/learning/{id}")
-    public String showLearningPage(@PathVariable("id") Long id, Model model) {
-        Application application = applicationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
+    public String viewLearning(@PathVariable("id") Long applicationId, Model model, Principal principal) {
+        // 1. Өтінімді табамыз
+        Application application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new RuntimeException("Заявка табылмады"));
 
-        System.out.println("DEBUG: Загружаем страницу для заявки ID: " + application.getId());
+        // 2. Бұл өтінім осы студентке тиісті ме, тексеру (қауіпсіздік үшін)
+        if (!application.getStudent().getUsername().equals(principal.getName())) {
+            return "redirect:/student/my-applications?error=access_denied";
+        }
 
+        // 3. Стажировканы және оның материалдарын модельге қосамыз
         model.addAttribute("application", application);
         model.addAttribute("internship", application.getInternship());
 
-        return "student/learning";
+        // Егер материалдарың бөлек кестеде болса:
+        // model.addAttribute("materials", learningMaterialRepository.findByInternship(application.getInternship()));
+
+        return "student/learning"; // Жаңа HTML файлының аты
     }
 
     @PostMapping("/complete-learning/{appId}")
