@@ -12,14 +12,20 @@ import java.util.List;
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
     List<Application> findByInternshipCompanyId(Long companyId);
+
     List<Application> findByStudent(User student);
 
     void deleteByStudent(User student);
-    void deleteByInternship(Internship internship);
-    void deleteByInternshipId(Long internshipId);
-    boolean existsByStudentAndInternship(User student, Internship internship);
-    long countByInternship(Internship internship);
-    boolean existsByStudentAndStatus(User student, ApplicationStatus status);
-    boolean existsByStudentIdAndStatus(Long studentId, ApplicationStatus status);
 
+    void deleteByInternship(Internship internship);
+
+    void deleteByInternshipId(Long internshipId);
+
+    boolean existsByStudentAndInternship(User student, Internship internship);
+
+    long countByInternship(Internship internship);
+
+    boolean existsByStudentAndStatus(User student, ApplicationStatus status);
+
+    boolean existsByStudentIdAndStatus(Long studentId, ApplicationStatus status);
 }

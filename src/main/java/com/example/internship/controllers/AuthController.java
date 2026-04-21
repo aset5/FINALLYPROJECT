@@ -59,18 +59,30 @@ public class AuthController {
             return "register";
         }
 
+        // 1. Логин тексеру
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             model.addAttribute("error", "Бұл логин бос емес!");
             model.addAttribute("universities", universityRepository.findAll());
             return "register";
         }
 
+        // 2. Пароль валидациясы (Алдыңғы сұрағың бойынша)
+        String passwordPattern = "^(?=.*[A-Z]).{8,}$";
+        if (!user.getPassword().matches(passwordPattern)) {
+            model.addAttribute("error", "Пароль кемінде 8 символ және бір үлкен әріптен тұруы керек!");
+            model.addAttribute("universities", universityRepository.findAll());
+            return "register";
+        }
+
+        // Парольді кодтау
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
+        // 3. Email растау логикасы (Егер тексергің келмесе, true қыл)
         String token = UUID.randomUUID().toString();
         user.setVerificationCode(token);
-        user.setEnabled(false);
+        user.setEnabled(true); // Қазірше бірден кіру үшін TRUE қылдық
 
+        // Рольдерді анықтау
         if ("UNIVERSITY".equalsIgnoreCase(roleType)) {
             user.setRole(Role.UNIVERSITY_ADMIN);
             if (uniName != null && !uniName.trim().isEmpty()) {
@@ -90,14 +102,15 @@ public class AuthController {
 
         try {
             userRepository.save(user);
-            emailService.sendVerificationEmail(user.getEmail(), token);
+            // Егер SMTP бапталмаған болса, бұл жерде қате шығуы мүмкін
+            // emailService.sendVerificationEmail(user.getEmail(), token);
         } catch (Exception e) {
-            model.addAttribute("error", "Хат жіберу кезінде техникалық қате шықты: " + e.getMessage());
+            model.addAttribute("error", "Қате: " + e.getMessage());
+            model.addAttribute("universities", universityRepository.findAll());
             return "register";
         }
 
-        return "redirect:/login?sent";
+        return "redirect:/login?success";
     }
-
 
 }

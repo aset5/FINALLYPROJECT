@@ -9,7 +9,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Controller
 @RequestMapping("/student")
 public class StudentController {
-
+    private final PasswordEncoder passwordEncoder;
     private final ApplicationRepository applicationRepository;
     private final UserRepository userRepository;
     private final InternshipRepository internshipRepository;
@@ -35,11 +35,13 @@ public class StudentController {
 
     public StudentController(ApplicationRepository applicationRepository,
                              UserRepository userRepository,
+                             PasswordEncoder passwordEncoder,
                              InternshipRepository internshipRepository,
                              MessageRepository messageRepository,
                              TelegramBotService telegramBotService) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
         this.internshipRepository = internshipRepository;
         this.messageRepository = messageRepository;
         this.telegramBotService = telegramBotService;
@@ -66,23 +68,19 @@ public class StudentController {
 
         return "student/application";
     }
-    @PostMapping("/apply/{internshipId}")
+    @PostMapping("/apply/{id}")
     @Transactional
-    public String apply(@PathVariable Long internshipId, Principal principal, RedirectAttributes redirectAttributes) {
+    public String apply(@PathVariable("id") Long id, Principal principal, RedirectAttributes redirectAttributes) {
         try {
-            Internship internship = internshipRepository.findById(internshipId)
-                    .orElseThrow(() -> new RuntimeException("Стажировка не найдена"));
             User student = userRepository.findByUsername(principal.getName())
-                    .orElseThrow(() -> new RuntimeException("Студент не найден"));
+                    .orElseThrow(() -> new RuntimeException("Студент табылмады"));
 
+            Internship internship = internshipRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Стажировка табылмады"));
+
+            // 1. Қайталанбауын тексеру (бұл маңызды, бір студент бірнеше рет отклик жасамауы керек)
             if (applicationRepository.existsByStudentAndInternship(student, internship)) {
-                redirectAttributes.addFlashAttribute("errorMessage", "Вы уже откликнулись на эту позицию.");
-                return "redirect:/student/my-applications";
-            }
-
-
-            if (internship.getJoinedCount() >= internship.getMaxPlaces()) {
-                redirectAttributes.addFlashAttribute("errorMessage", "Кешіріңіз, бос орын таусылды!");
+                redirectAttributes.addFlashAttribute("errorMessage", "Сіз бұл позицияға өтінім беріп қойғансыз.");
                 return "redirect:/student/my-applications";
             }
 
@@ -91,23 +89,31 @@ public class StudentController {
             application.setInternship(internship);
             application.setAppliedAt(LocalDateTime.now());
 
+            // 2. Логиканы бөлу
             if (internship.getUniversity() != null) {
-                application.setStatus(ApplicationStatus.APPROVED);
+                // УНИВЕРСИТЕТ: Орын санын тексереміз
+                if (internship.getJoinedCount() >= internship.getMaxPlaces()) {
+                    redirectAttributes.addFlashAttribute("errorMessage", "Кешіріңіз, университет бағдарламасында бос орындар таусылды!");
+                    return "redirect:/student/my-applications";
+                }
 
+                application.setStatus(ApplicationStatus.APPROVED);
                 internship.setJoinedCount(internship.getJoinedCount() + 1);
                 internshipRepository.save(internship);
+                redirectAttributes.addFlashAttribute("successMessage", "Сіз оқуға сәтті жазылдыңыз!");
 
-                redirectAttributes.addFlashAttribute("successMessage", "Вы успешно записаны на обучение!");
             } else {
+                // КОМПАНИЯ: Орын санына қарамаймыз, тек PENDING статусын береміз
+                // Шешімді компания өзі қабылдайды
                 application.setStatus(ApplicationStatus.PENDING);
-                redirectAttributes.addFlashAttribute("successMessage", "Отклик отправлен. Ожидайте одобрения компании.");
+                redirectAttributes.addFlashAttribute("successMessage", "Отклик жіберілді. Компания жауабын күтіңіз.");
             }
 
             applicationRepository.save(application);
 
         } catch (Exception e) {
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка при подаче заявки: " + e.getMessage());
+            System.err.println("Қате: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Қате орын алды: " + e.getMessage());
         }
 
         return "redirect:/student/my-applications";
@@ -277,4 +283,32 @@ public class StudentController {
         model.addAttribute("jobs", companyJobs);
         return "student/job-market";
     }
+
+    @PostMapping("/profile/update-password")
+    public String updatePassword(@RequestParam("oldPassword") String oldPassword,
+                                 @RequestParam("newPassword") String newPassword,
+                                 @RequestParam("confirmPassword") String confirmPassword,
+                                 Principal principal,
+                                 RedirectAttributes redirectAttributes) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Қазіргі пароль қате!");
+            return "redirect:/student/profile";
+        }
+        String passwordPattern = "^(?=.*[A-Z]).{8,}$";
+        if (!newPassword.matches(passwordPattern)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Пароль кемінде 8 символ және бір үлкен әріптен тұруы керек!");
+            return "redirect:/student/profile";
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Парольдер сәйкес емес!");
+            return "redirect:/student/profile";
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        redirectAttributes.addFlashAttribute("successMessage", "Пароль сәтті өзгертілді!");
+        return "redirect:/student/profile";
+    }
+
+
 }

@@ -30,6 +30,7 @@ public class UniversityAdminController {
     @Autowired
     private ApplicationRepository applicationRepository;
 
+    // Басты бет: университет стажировкалары мен өтінімдерді көру
     @GetMapping("/dashboard")
     public String dashboard(Model model, Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
@@ -38,6 +39,7 @@ public class UniversityAdminController {
         University university = user.getUniversity();
         List<Internship> myInternships = internshipRepository.findByUniversity(university);
 
+        // Барлық стажировкалар бойынша өтінімдерді жинау
         List<Application> allApplications = myInternships.stream()
                 .flatMap(i -> i.getApplications().stream())
                 .collect(Collectors.toList());
@@ -50,17 +52,22 @@ public class UniversityAdminController {
         return "university/dashboard";
     }
 
+    // Жаңа стажировка қосу (Оқу материалдарымен бірге)
     @PostMapping("/add-internship")
     public String addInternship(@ModelAttribute Internship internship, Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
         internship.setUniversity(user.getUniversity());
+
+        // МАҢЫЗДЫ: Статус күту режимінде қалады
         internship.setStatus(InternshipStatus.PENDING);
 
         internshipRepository.save(internship);
+        return "redirect:/university-admin/dashboard?status=pending";
+    }
 
-        return "redirect:/university-admin/dashboard";    }
+    // Өңдеу бетіне өту
     @GetMapping("/internship/edit/{id}")
     public String editInternship(@PathVariable Long id, Model model) {
         Internship internship = internshipRepository.findById(id)
@@ -70,32 +77,33 @@ public class UniversityAdminController {
         return "university/edit-internship";
     }
 
+    // Стажировка мәліметтерін жаңарту
     @PostMapping("/internship/update")
     public String updateInternship(@ModelAttribute("internship") Internship internship) {
-        Internship existing = internshipRepository.findById(internship.getId()).get();
+        Internship existing = internshipRepository.findById(internship.getId())
+                .orElseThrow(() -> new RuntimeException("Стажировка табылмады"));
 
         existing.setTitle(internship.getTitle());
         existing.setDescription(internship.getDescription());
         existing.setStudyMaterials(internship.getStudyMaterials());
         existing.setMaxPlaces(internship.getMaxPlaces());
 
+        // Өңделгеннен кейін де статус қайтадан модерацияға кетеді
         existing.setStatus(InternshipStatus.PENDING);
 
         internshipRepository.save(existing);
+        return "redirect:/university-admin/dashboard?success=updated_pending";
+    }
 
-        return "redirect:/university-admin/dashboard";    }
-
+    // Студенттің өтінімін растау
     @PostMapping("/application/verify/{id}")
     public String verifyApplication(@PathVariable Long id) {
         Application app = applicationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Өтінім табылмады: " + id));
 
         app.setStatus(ApplicationStatus.VERIFIED);
-
         applicationRepository.save(app);
 
         return "redirect:/university-admin/dashboard?success=verified";
     }
-
-
 }

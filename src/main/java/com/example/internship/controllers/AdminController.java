@@ -2,6 +2,7 @@ package com.example.internship.controllers;
 
 import com.example.internship.models.*;
 import com.example.internship.repositories.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -20,20 +21,22 @@ public class AdminController {
     private final ApplicationRepository applicationRepository;
     private final CompanyRepository companyRepository;
     private final MessageRepository messageRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
     public AdminController(InternshipRepository internshipRepository,
                            UserRepository userRepository,
                            ApplicationRepository applicationRepository,
                            CompanyRepository companyRepository,
-                           MessageRepository messageRepository) {
+                           MessageRepository messageRepository,
+                           PasswordEncoder passwordEncoder) {
         this.internshipRepository = internshipRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
         this.companyRepository = companyRepository;
         this.messageRepository = messageRepository;
+        this.passwordEncoder = passwordEncoder;
     }
-
 
     @GetMapping("/dashboard")
     public String adminDashboard(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
@@ -49,31 +52,6 @@ public class AdminController {
         return "admin/dashboard";
     }
 
-    @GetMapping("/moderation")
-    public String showModerationList(Model model) {
-        model.addAttribute("pendingInternships", internshipRepository.findByStatus(InternshipStatus.PENDING));
-        return "admin/dashboard";
-    }
-
-    @PostMapping("/approve/{id}")
-    public String approveInternship(@PathVariable Long id) {
-        Internship internship = internshipRepository.findById(id).orElseThrow();
-        internship.setStatus(InternshipStatus.APPROVED);
-        internshipRepository.save(internship);
-        return "redirect:/admin/dashboard";
-    }
-
-    @PostMapping("/delete/{id}")
-    @Transactional
-    public String deleteInternship(@PathVariable Long id) {
-        Internship internship = internshipRepository.findById(id).orElseThrow();
-        messageRepository.deleteByInternship(internship);
-        applicationRepository.deleteByInternship(internship);
-        internshipRepository.delete(internship);
-        return "redirect:/admin/dashboard";
-    }
-
-
     @GetMapping("/users")
     public String listUsers(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
         List<User> users;
@@ -87,11 +65,39 @@ public class AdminController {
         return "admin/users";
     }
 
+    @PostMapping("/users/update-full")
+    public String updateFullUser(@RequestParam Long userId,
+                                 @RequestParam String newUsername,
+                                 @RequestParam(required = false) String newPassword,
+                                 RedirectAttributes redirectAttributes) {
+        User user = userRepository.findById(userId).orElseThrow();
+
+        if (!user.getUsername().equals(newUsername) && userRepository.existsByUsername(newUsername)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Логин '" + newUsername + "' уже занят!");
+            return "redirect:/admin/users";
+        }
+        user.setUsername(newUsername);
+
+        if (newPassword != null && !newPassword.isBlank()) {
+            // ЖАҢАРТЫЛҒАН REGEX: 8 символ + 1 Үлкен әріп
+            String passwordPattern = "^(?=.*[A-Z]).{8,}$";
+            if (!newPassword.matches(passwordPattern)) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Пароль должен быть не менее 8 символов и содержать хотя бы одну заглавную букву!");
+                return "redirect:/admin/users";
+            }
+            user.setPassword(passwordEncoder.encode(newPassword));
+        }
+
+        userRepository.save(user);
+        redirectAttributes.addFlashAttribute("successMessage", "Данные пользователя #" + userId + " успешно обновлены.");
+        return "redirect:/admin/users";
+    }
+
     @Transactional
     @PostMapping("/users/delete/{id}")
     public String deleteUser(@PathVariable Long id) {
         User user = userRepository.findById(id).orElseThrow();
-
         messageRepository.deleteBySenderIdOrReceiverId(id, id);
         applicationRepository.deleteByStudent(user);
 
@@ -105,24 +111,15 @@ public class AdminController {
             internshipRepository.deleteByCompany(company);
             companyRepository.delete(company);
         }
-
         userRepository.delete(user);
         return "redirect:/admin/users";
     }
 
-    @PostMapping("/users/update-username")
-    public String updateUsername(@RequestParam Long userId,
-                                 @RequestParam String newUsername,
-                                 RedirectAttributes redirectAttributes) {
-        User user = userRepository.findById(userId).orElseThrow();
-
-        if (userRepository.existsByUsername(newUsername)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Ошибка: Логин '" + newUsername + "' уже занят!");
-        } else {
-            user.setUsername(newUsername);
-            userRepository.save(user);
-            redirectAttributes.addFlashAttribute("successMessage", "Логин пользователя #" + userId + " успешно изменен.");
-        }
-        return "redirect:/admin/users";
+    @PostMapping("/approve/{id}")
+    public String approveInternship(@PathVariable Long id) {
+        Internship internship = internshipRepository.findById(id).orElseThrow();
+        internship.setStatus(InternshipStatus.APPROVED);
+        internshipRepository.save(internship);
+        return "redirect:/admin/dashboard";
     }
 }

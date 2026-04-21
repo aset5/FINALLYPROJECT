@@ -45,4 +45,14 @@ public class Internship {
     public boolean hasAvailablePlaces() {
         return joinedCount < maxPlaces;
     }
+
+
+    // Getter және Setter
+    public String getStudyMaterials() {
+        return studyMaterials;
+    }
+
+    public void setStudyMaterials(String studyMaterials) {
+        this.studyMaterials = studyMaterials;
+    }
 }

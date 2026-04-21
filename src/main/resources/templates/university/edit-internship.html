@@ -5,6 +5,10 @@
   <title>Редактирование | INTERN.PRO</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    .form-control:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15); }
+    .materials-area { background-color: #fcfcfc; border-left: 4px solid #0d6efd; }
+  </style>
 </head>
 <body class="bg-light">
 <div class="container mt-5 mb-5">
@@ -16,13 +20,14 @@
           <h3 class="fw-bold mb-0">Редактировать стажировку</h3>
         </div>
 
-        <div class="alert alert-warning border-0 rounded-3 small">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>
-          После сохранения программа получит статус <strong>"На модерации"</strong> и будет временно скрыта из поиска до проверки администратором.
+        <div class="alert alert-info border-0 rounded-3 small">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          После сохранения программа будет доступна для просмотра студентам вашего университета.
         </div>
         <hr class="text-muted">
 
-        <form th:action="@{/university-admin/internship/update}" th:object="${internship}" method="post">          <input type="hidden" th:field="*{id}">
+        <form th:action="@{/university-admin/internship/update}" th:object="${internship}" method="post">
+          <input type="hidden" th:field="*{id}">
 
           <div class="mb-3">
             <label class="form-label fw-bold small text-uppercase text-muted">Название программы</label>
@@ -32,7 +37,7 @@
 
           <div class="row mb-3">
             <div class="col-md-6">
-              <label class="form-label fw-bold small text-uppercase text-muted">Макс. мест</label>
+              <label class="form-label fw-bold small text-uppercase text-muted">Макс. количество мест</label>
               <input type="number" th:field="*{maxPlaces}" class="form-control rounded-3" required min="1">
             </div>
           </div>
@@ -40,24 +45,26 @@
           <div class="mb-3">
             <label class="form-label fw-bold small text-uppercase text-muted">Описание для студентов</label>
             <textarea th:field="*{description}" class="form-control rounded-3" rows="4"
-                      placeholder="Расскажите о целях и задачах..."></textarea>
+                      placeholder="Расскажите о целях и задачах стажировки..."></textarea>
           </div>
 
           <div class="mb-4">
-            <label class="form-label fw-bold small text-uppercase text-muted">Обучающие материалы (будут доступны после одобрения)</label>
-            <textarea th:field="*{studyMaterials}" class="form-control rounded-3 font-monospace" rows="10"
-                      placeholder="Вставьте текст лекций, ссылки на видео или инструкции..."></textarea>
-            <div class="form-text mt-2">
-              <i class="bi bi-info-circle me-1"></i> Эти материалы увидят только те студенты, чьи заявки вы одобрите.
+            <label class="form-label fw-bold small text-uppercase text-primary">
+              <i class="bi bi-book-half me-1"></i> Обучающие материалы и ссылки
+            </label>
+            <textarea th:field="*{studyMaterials}" class="form-control rounded-3 font-monospace materials-area" rows="8"
+                      placeholder="Вставьте сюда ссылки на видео, инструкции или учебные тексты..."></textarea>
+            <div class="form-text mt-2 text-dark">
+              <i class="bi bi-shield-lock me-1"></i> <strong>Құпиялылық:</strong> Бұл материалдарды тек сіз өтінімін растаған (Verified) студенттер ғана көре алады.
             </div>
           </div>
 
-          <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded-3">
-            <a href="/university/dashboard" class="btn btn-link text-secondary text-decoration-none">
-              <i class="bi bi-arrow-left me-1"></i> Вернуться без сохранения
+          <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded-3 mt-4">
+            <a th:href="@{/university-admin/dashboard}" class="btn btn-link text-secondary text-decoration-none">
+              <i class="bi bi-arrow-left me-1"></i> Отмена
             </a>
-            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
-              <i class="bi bi-send-check me-2"></i> Сохранить и отправить
+            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm rounded-pill">
+              <i class="bi bi-cloud-arrow-up-fill me-2"></i> Обновить программу
             </button>
           </div>
         </form>

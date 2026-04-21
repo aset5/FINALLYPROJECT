@@ -14,7 +14,6 @@
     .badge-student { background-color: #198754; color: white; }
     .table thead { background-color: #212529; color: white; }
 
-    /* Стили для поиска */
     .search-input-group {
       background: white;
       border-radius: 12px;
@@ -30,6 +29,9 @@
       padding: 8px 20px;
     }
     .modal-content { border-radius: 20px; }
+
+    /* Валидацияға арналған стиль */
+    .password-hint { font-size: 0.75rem; color: #6c757d; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -54,11 +56,11 @@
 <div class="container">
   <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm border-0 mb-4" role="alert">
     <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${successMessage}"></span>
-    <button type="button" class="btn-close" data-bs-alert="alert" aria-label="Close"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
   <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm border-0 mb-4" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2"></i> <span th:text="${errorMessage}"></span>
-    <button type="button" class="btn-close" data-bs-alert="alert" aria-label="Close"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 
   <div class="row align-items-center mb-4 px-2">
@@ -142,23 +144,30 @@
                 <div class="modal-dialog modal-dialog-centered">
                   <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header border-0 pb-0">
-                      <h5 class="modal-title fw-bold">Изменение логина</h5>
+                      <h5 class="modal-title fw-bold">Редактирование профиля</h5>
                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form th:action="@{/admin/users/update-username}" method="post">
+                    <form th:action="@{/admin/users/update-full}" method="post">
                       <div class="modal-body p-4">
                         <input type="hidden" name="userId" th:value="${u.id}">
+
                         <div class="mb-3">
-                          <label class="form-label small fw-bold">Текущий логин:</label>
-                          <input type="text" class="form-control bg-light" th:value="${u.username}" readonly>
+                          <label class="form-label small fw-bold text-primary">Логин (username):</label>
+                          <input type="text" name="newUsername" class="form-control border-primary-subtle"
+                                 th:value="${u.username}" required minlength="3">
                         </div>
+
                         <div class="mb-3">
-                          <label class="form-label small fw-bold text-primary">Новый логин (username):</label>
-                          <input type="text" name="newUsername" class="form-control border-primary"
-                                 placeholder="Введите новый логин..." required minlength="3">
+                          <label class="form-label small fw-bold text-danger">Новый пароль:</label>
+                          <input type="password" name="newPassword" class="form-control border-danger-subtle"
+                                 placeholder="Оставьте пустым, чтобы не менять">
+                          <div class="password-hint">
+                            <i class="bi bi-info-circle me-1"></i> Мин. 8 символов и хотя бы одна согласная буква.
+                          </div>
                         </div>
+
                         <p class="text-muted extra-small" style="font-size: 0.75rem;">
-                          * После изменения пользователь должен будет войти в систему с новым логином.
+                          * После изменения пароля или логина, пользователь должен будет войти заново.
                         </p>
                       </div>
                       <div class="modal-footer border-0 pt-0">
