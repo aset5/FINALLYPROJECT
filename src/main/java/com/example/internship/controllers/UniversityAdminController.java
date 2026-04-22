@@ -78,6 +78,11 @@ public class UniversityAdminController {
         return "redirect:/university-admin/dashboard?message=sent_to_moderation";
     }
 
+    @PostMapping("/internship/delete/{id}")
+    public String deleteInternship(@PathVariable Long id) {
+        internshipRepository.deleteById(id);
+        return "redirect:/university-admin/dashboard";
+    }
     // Өңдеу бетіне өту
     @GetMapping("/internship/edit/{id}")
     public String editInternship(@PathVariable Long id, Model model) {

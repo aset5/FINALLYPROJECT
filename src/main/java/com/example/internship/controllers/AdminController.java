@@ -122,4 +122,23 @@ public class AdminController {
         internshipRepository.save(internship);
         return "redirect:/admin/dashboard";
     }
+
+    @Transactional
+    @PostMapping("/delete/{id}")
+    public String deleteInternship(@PathVariable Long id) {
+        // 1. Стажировканы табамыз
+        Internship internship = internshipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Стажировка табылмады"));
+
+        // 2. Бұл стажировкаға қатысты хабарламалар мен өтінімдерді өшіреміз
+        // (Foreign Key қатесі шықпас үшін)
+        messageRepository.deleteByInternship(internship);
+        applicationRepository.deleteByInternship(internship);
+
+        // 3. Стажировканың өзін өшіреміз
+        internshipRepository.delete(internship);
+
+        // 4. Қайтадан админ панельге ораламыз
+        return "redirect:/admin/dashboard";
+    }
 }
