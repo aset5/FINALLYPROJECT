@@ -8,6 +8,12 @@ import type { Application, Internship } from '../../types';
 
 interface AppsData {
   isVerified: boolean;
+  hasActiveUniversityProgram: boolean;
+  activeUniversityApplicationId: number | null;
+  appliedInternshipIds: number[];
+  acceptedCompanyInternships: number;
+  maxCompanyInternships: number;
+  canTakeMoreInternships: boolean;
   applications: Application[];
   companyJobs: Internship[];
 }
@@ -58,6 +64,22 @@ export default function ApplicationsPage() {
       {msg && (
         <Alert variant="success" className="alert-modern mb-4" dismissible onClose={() => setMsg('')}>
           {msg}
+        </Alert>
+      )}
+
+      {data.hasActiveUniversityProgram && (
+        <Alert variant="info" className="alert-modern mb-4">
+          Вы обучаетесь на одной программе ВУЗа. Другую программу можно выбрать после завершения и
+          верификации текущей.
+        </Alert>
+      )}
+
+      {data.isVerified && (
+        <Alert variant="secondary" className="alert-modern mb-4">
+          Стажировки: {data.acceptedCompanyInternships} из {data.maxCompanyInternships} принято.
+          {data.canTakeMoreInternships
+            ? ' Откликаться можно на любые вакансии; компания примет не больше лимита.'
+            : ' Лимит стажировок исчерпан — новые отклики возможны, но компания не сможет принять ещё одну.'}
         </Alert>
       )}
 
@@ -128,19 +150,30 @@ export default function ApplicationsPage() {
             Доступные вакансии
           </div>
           <Row className="g-3">
-            {data.companyJobs.map((job) => (
-              <Col md={4} key={job.id}>
-                <div className="card card-job accent h-100">
-                  <div className="card-body">
-                    <h6 className="card-title fw-bold">{job.title}</h6>
-                    <p className="small text-muted mb-3">{job.companyName}</p>
-                    <button type="button" className="btn btn-gradient-accent btn-sm" onClick={() => apply(job.id)}>
-                      Откликнуться
-                    </button>
+            {data.companyJobs.map((job) => {
+              const alreadyApplied = data.appliedInternshipIds.includes(job.id);
+              return (
+                <Col md={4} key={job.id}>
+                  <div className="card card-job accent h-100">
+                    <div className="card-body">
+                      <h6 className="card-title fw-bold">{job.title}</h6>
+                      <p className="small text-muted mb-3">{job.companyName}</p>
+                      {alreadyApplied ? (
+                        <span className="badge bg-secondary">Отклик отправлен</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-gradient-accent btn-sm"
+                          onClick={() => apply(job.id)}
+                        >
+                          Откликнуться
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Col>
-            ))}
+                </Col>
+              );
+            })}
           </Row>
         </>
       )}

@@ -167,6 +167,7 @@ export default function LearningPage() {
 
   const isCompleted =
     data.application.status === 'COMPLETED' || data.application.status === 'VERIFIED';
+  const quizSubmitted = data.quizScorePercent != null;
   const legacyMaterials = data.internship.studyMaterials?.trim();
   const lessonsTotal = data.lessons.length;
   const lessonsDone = data.lessons.filter((l) => l.completed).length;
@@ -370,6 +371,28 @@ export default function LearningPage() {
           {data.hasQuiz && (
             <Tab.Pane eventKey="quiz">
               <Card className="card-modern border-0 p-4">
+                {quizSubmitted && (
+                  <Alert
+                    variant={data.quizPassed ? 'success' : 'warning'}
+                    className="alert-modern mb-4"
+                  >
+                    {data.quizPassed ? (
+                      <>
+                        Тест пройден: {data.quizScorePercent}%. Повторная сдача недоступна.
+                      </>
+                    ) : (
+                      <>
+                        Тест сдан: {data.quizScorePercent}% (нужно ≥ {data.quizPassThreshold}%).
+                        Повторная попытка невозможна — варианты ответов заблокированы.
+                      </>
+                    )}
+                  </Alert>
+                )}
+                {!quizSubmitted && !isCompleted && (
+                  <p className="small text-muted mb-3">
+                    Одна попытка: после отправки изменить ответы будет нельзя.
+                  </p>
+                )}
                 <Form onSubmit={submitQuiz}>
                   {data.quizQuestions.map((q, qi) => (
                     <div key={q.id} className="mb-4">
@@ -385,15 +408,15 @@ export default function LearningPage() {
                           label={opt}
                           checked={answers[q.id] === oi}
                           onChange={() => setAnswers((prev) => ({ ...prev, [q.id]: oi }))}
-                          disabled={isCompleted}
+                          disabled={isCompleted || quizSubmitted}
                           className="mb-1"
                         />
                       ))}
                     </div>
                   ))}
-                  {!isCompleted && (
-                    <Button type="submit" className="btn-gradient" disabled={data.quizPassed}>
-                      {data.quizPassed ? 'Тест уже пройден' : 'Отправить ответы'}
+                  {!isCompleted && !quizSubmitted && (
+                    <Button type="submit" className="btn-gradient">
+                      Отправить ответы (одна попытка)
                     </Button>
                   )}
                 </Form>

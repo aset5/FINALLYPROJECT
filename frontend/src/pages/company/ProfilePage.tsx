@@ -4,17 +4,27 @@ import { Button, Card, Container, Form } from 'react-bootstrap';
 import { api } from '../../api/client';
 import type { Company } from '../../types';
 
+interface CompanyProfileForm {
+  name: string;
+  bin: string;
+}
+
 export default function CompanyProfilePage() {
   const navigate = useNavigate();
-  const [company, setCompany] = useState<Company>({ name: '', bin: '' });
+  const [form, setForm] = useState<CompanyProfileForm>({ name: '', bin: '' });
 
   useEffect(() => {
-    api.get<Company>('/api/company/profile').then(setCompany);
+    api.get<Company>('/api/company/profile').then((c) =>
+      setForm({ name: c.name || '', bin: c.bin || '' }),
+    );
   }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await api.post('/api/company/profile', company);
+    await api.post('/api/company/profile', {
+      name: form.name.trim(),
+      bin: form.bin.trim() || null,
+    });
     navigate('/company/dashboard');
   };
 
@@ -26,16 +36,16 @@ export default function CompanyProfilePage() {
           <Form.Group className="mb-3">
             <Form.Label>Название</Form.Label>
             <Form.Control
-              value={company.name || ''}
-              onChange={(e) => setCompany({ ...company, name: e.target.value })}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
             />
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>БИН</Form.Label>
             <Form.Control
-              value={company.bin || ''}
-              onChange={(e) => setCompany({ ...company, bin: e.target.value })}
+              value={form.bin}
+              onChange={(e) => setForm({ ...form, bin: e.target.value })}
             />
           </Form.Group>
           <Button type="submit" className="w-100">Сохранить</Button>

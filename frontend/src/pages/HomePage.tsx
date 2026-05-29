@@ -10,6 +10,8 @@ interface HomeData {
   uniPrograms: Internship[];
   companyJobs: Internship[];
   isVerified: boolean;
+  hasActiveUniversityProgram?: boolean;
+  appliedInternshipIds?: number[];
 }
 
 type TypeFilter = 'all' | 'programs' | 'jobs';
@@ -438,11 +440,48 @@ export default function HomePage() {
               <p className="text-muted" style={{ lineHeight: 1.7 }}>
                 {selected.description || 'Описание не указано'}
               </p>
-              {user?.role === 'STUDENT' && (
-                <button type="button" className="btn btn-gradient w-100 mt-2" onClick={() => apply(selected.id)}>
-                  Подать заявку
-                </button>
-              )}
+              {user?.role === 'STUDENT' && selected && (() => {
+                const isProgram = !selected.companyJob;
+                const alreadyApplied = data?.appliedInternshipIds?.includes(selected.id) ?? false;
+                const canEnrollProgram =
+                  isProgram && !alreadyApplied && !data?.hasActiveUniversityProgram;
+                const canApplyJob = !isProgram && data?.isVerified && !alreadyApplied;
+
+                if (alreadyApplied) {
+                  return (
+                    <p className="text-muted small mb-0 mt-2 text-center">
+                      Вы уже подали заявку на эту позицию
+                    </p>
+                  );
+                }
+                if (isProgram && data?.hasActiveUniversityProgram) {
+                  return (
+                    <Alert variant="warning" className="small mb-0 mt-2 py-2">
+                      Можно обучаться только на одной программе ВУЗа. Завершите текущую и дождитесь
+                      верификации.
+                    </Alert>
+                  );
+                }
+                if (!isProgram && !data?.isVerified) {
+                  return (
+                    <Alert variant="warning" className="small mb-0 mt-2 py-2">
+                      Отклики на вакансии доступны после верификации программы ВУЗом.
+                    </Alert>
+                  );
+                }
+                if (canEnrollProgram || canApplyJob) {
+                  return (
+                    <button
+                      type="button"
+                      className="btn btn-gradient w-100 mt-2"
+                      onClick={() => apply(selected.id)}
+                    >
+                      {isProgram ? 'Записаться на программу' : 'Откликнуться'}
+                    </button>
+                  );
+                }
+                return null;
+              })()}
             </>
           )}
         </Modal.Body>

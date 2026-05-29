@@ -22,10 +22,25 @@ export default function JobMarketPage() {
   const [msg, setMsg] = useState('');
   const [aiError, setAiError] = useState('');
 
+  const [appliedIds, setAppliedIds] = useState<Set<number>>(new Set());
+  const [internshipSlots, setInternshipSlots] = useState({ accepted: 0, max: 2 });
+
   useEffect(() => {
     api
-      .get<{ jobs: Internship[] }>('/api/student/job-market')
-      .then((d) => setJobs(d.jobs))
+      .get<{
+        jobs: Internship[];
+        appliedInternshipIds: number[];
+        acceptedCompanyInternships: number;
+        maxCompanyInternships: number;
+      }>('/api/student/job-market')
+      .then((d) => {
+        setJobs(d.jobs);
+        setAppliedIds(new Set(d.appliedInternshipIds ?? []));
+        setInternshipSlots({
+          accepted: d.acceptedCompanyInternships ?? 0,
+          max: d.maxCompanyInternships ?? 2,
+        });
+      })
       .finally(() => setLoadingJobs(false));
   }, []);
 
@@ -45,6 +60,7 @@ export default function JobMarketPage() {
   const apply = async (id: number) => {
     try {
       await api.post(`/api/student/apply/${id}`);
+      setAppliedIds((prev) => new Set(prev).add(id));
       setMsg('Отклик отправлен');
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Ошибка');
@@ -64,6 +80,11 @@ export default function JobMarketPage() {
 
   return (
     <Container className="py-4">
+      <Alert variant="secondary" className="alert-modern mb-3">
+        Принято стажировок: {internshipSlots.accepted} / {internshipSlots.max}. Откликнуться можно на
+        все вакансии; одновременно пройти можно не больше {internshipSlots.max}.
+      </Alert>
+
       <PageHeader
         title="Рынок вакансий"
         subtitle="AI поможет найти позиции, которые лучше всего подходят вашему резюме"
@@ -202,9 +223,17 @@ export default function JobMarketPage() {
                       </div>
                     )}
                     <p className="small text-muted mb-3 line-clamp-3">{job.description}</p>
-                    <button type="button" className="btn btn-gradient-accent btn-sm w-100" onClick={() => apply(job.id)}>
-                      Откликнуться
-                    </button>
+                    {appliedIds.has(job.id) ? (
+                      <span className="badge bg-secondary w-100 py-2">Отклик отправлен</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-gradient-accent btn-sm w-100"
+                        onClick={() => apply(job.id)}
+                      >
+                        Откликнуться
+                      </button>
+                    )}
                   </div>
                 </div>
               </Col>

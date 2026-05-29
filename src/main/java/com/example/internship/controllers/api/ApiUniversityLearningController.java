@@ -4,7 +4,7 @@ import com.example.internship.dto.*;
 import com.example.internship.models.*;
 import com.example.internship.repositories.*;
 import com.example.internship.services.LearningService;
-import com.example.internship.services.TelegramBotService;
+import com.example.internship.services.TelegramNotificationSender;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -35,7 +35,7 @@ public class ApiUniversityLearningController {
     private final QuizQuestionRepository quizQuestionRepository;
     private final MessageRepository messageRepository;
     private final LearningService learningService;
-    private final TelegramBotService telegramBotService;
+    private final TelegramNotificationSender telegramNotifications;
 
     public ApiUniversityLearningController(UserRepository userRepository,
                                            ProgramLessonRepository lessonRepository,
@@ -43,14 +43,14 @@ public class ApiUniversityLearningController {
                                            QuizQuestionRepository quizQuestionRepository,
                                            MessageRepository messageRepository,
                                            LearningService learningService,
-                                           TelegramBotService telegramBotService) {
+                                           TelegramNotificationSender telegramNotifications) {
         this.userRepository = userRepository;
         this.lessonRepository = lessonRepository;
         this.materialRepository = materialRepository;
         this.quizQuestionRepository = quizQuestionRepository;
         this.messageRepository = messageRepository;
         this.learningService = learningService;
-        this.telegramBotService = telegramBotService;
+        this.telegramNotifications = telegramNotifications;
     }
 
     private User admin(UserDetails principal) {
@@ -312,7 +312,7 @@ public class ApiUniversityLearningController {
         messageRepository.save(msg);
 
         if (student.getTelegramChatId() != null) {
-            telegramBotService.sendNotification(student.getTelegramChatId(),
+            telegramNotifications.sendNotification(student.getTelegramChatId(),
                     "📚 Ответ куратора по программе \"" + internship.getTitle() + "\":\n\n" + content);
         }
         return MessageResponse.from(msg);

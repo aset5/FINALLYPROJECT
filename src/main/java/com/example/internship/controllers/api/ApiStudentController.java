@@ -3,8 +3,10 @@ package com.example.internship.controllers.api;
 import com.example.internship.dto.*;
 import com.example.internship.models.*;
 import com.example.internship.repositories.*;
+import com.example.internship.services.AuthorizationService;
 import com.example.internship.services.StudentAchievementService;
-import com.example.internship.services.TelegramBotService;
+import com.example.internship.services.TelegramNotificationSender;
+import org.springframework.web.server.ResponseStatusException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,8 +40,9 @@ public class ApiStudentController {
     private final PasswordEncoder passwordEncoder;
     private final InternshipRepository internshipRepository;
     private final MessageRepository messageRepository;
-    private final TelegramBotService telegramBotService;
+    private final TelegramNotificationSender telegramNotifications;
     private final StudentAchievementService studentAchievementService;
+    private final AuthorizationService authorizationService;
 
     @Value("${telegram.bot.name}")
     private String telegramBotUsername;
@@ -48,15 +52,17 @@ public class ApiStudentController {
                                 PasswordEncoder passwordEncoder,
                                 InternshipRepository internshipRepository,
                                 MessageRepository messageRepository,
-                                TelegramBotService telegramBotService,
-                                StudentAchievementService studentAchievementService) {
+                                TelegramNotificationSender telegramNotifications,
+                                StudentAchievementService studentAchievementService,
+                                AuthorizationService authorizationService) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.internshipRepository = internshipRepository;
         this.messageRepository = messageRepository;
-        this.telegramBotService = telegramBotService;
+        this.telegramNotifications = telegramNotifications;
         this.studentAchievementService = studentAchievementService;
+        this.authorizationService = authorizationService;
     }
 
     private User currentUser(UserDetails principal) {
@@ -82,10 +88,15 @@ public class ApiStudentController {
         boolean isVerified = apps.stream()
                 .anyMatch(app -> app.getStatus() == ApplicationStatus.VERIFIED);
 
+        Set<Long> appliedInternshipIds = apps.stream()
+                .map(a -> a.getInternship().getId())
+                .collect(Collectors.toSet());
+
         List<InternshipResponse> companyJobs = List.of();
         if (isVerified) {
             companyJobs = internshipRepository.findAll().stream()
                     .filter(i -> i.getCompany() != null)
+                    .filter(i -> i.getStatus() == InternshipStatus.APPROVED)
                     .map(InternshipResponse::from)
                     .toList();
         }
@@ -93,6 +104,15 @@ public class ApiStudentController {
         return Map.of(
                 "user", UserResponse.from(student),
                 "isVerified", isVerified,
+                "hasActiveUniversityProgram", authorizationService.hasActiveUniversityEnrollment(student),
+                "activeUniversityApplicationId",
+                authorizationService.findActiveUniversityApplication(student)
+                        .map(Application::getId)
+                        .orElse(null),
+                "appliedInternshipIds", appliedInternshipIds,
+                "acceptedCompanyInternships", authorizationService.countAcceptedCompanyInternships(student),
+                "maxCompanyInternships", AuthorizationService.MAX_COMPANY_INTERNSHIPS,
+                "canTakeMoreInternships", authorizationService.canTakeMoreCompanyInternships(student),
                 "applications", apps.stream().map(ApplicationResponse::from).toList(),
                 "companyJobs", companyJobs
         );
@@ -102,38 +122,33 @@ public class ApiStudentController {
     @Transactional
     public ResponseEntity<?> apply(@PathVariable Long id,
                                    @AuthenticationPrincipal UserDetails principal) {
-        try {
-            User student = currentUser(principal);
-            Internship internship = internshipRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Стажировка табылмады"));
+        User student = currentUser(principal);
+        Internship internship = authorizationService.requireOpenInternship(id);
+        authorizationService.assertStudentCanApply(student, internship);
 
-            if (applicationRepository.existsByStudentAndInternship(student, internship)) {
-                return ResponseEntity.badRequest()
-                        .body(new ApiError("Сіз бұл позицияға өтінім беріп қойғансыз."));
-            }
-
-            Application application = new Application();
-            application.setStudent(student);
-            application.setInternship(internship);
-            application.setAppliedAt(LocalDateTime.now());
-
-            if (internship.getUniversity() != null) {
-                if (internship.getJoinedCount() >= internship.getMaxPlaces()) {
-                    return ResponseEntity.badRequest()
-                            .body(new ApiError("Бос орындар таусылды!"));
-                }
-                application.setStatus(ApplicationStatus.APPROVED);
-                internship.setJoinedCount(internship.getJoinedCount() + 1);
-                internshipRepository.save(internship);
-            } else {
-                application.setStatus(ApplicationStatus.PENDING);
-            }
-
-            applicationRepository.save(application);
-            return ResponseEntity.ok(ApplicationResponse.from(application));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
+        if (applicationRepository.existsByStudentAndInternship(student, internship)) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiError("Вы уже подали заявку на эту позицию"));
         }
+
+        Application application = new Application();
+        application.setStudent(student);
+        application.setInternship(internship);
+        application.setAppliedAt(LocalDateTime.now());
+
+        if (internship.getUniversity() != null) {
+            if (internship.getMaxPlaces() > 0 && internship.getJoinedCount() >= internship.getMaxPlaces()) {
+                return ResponseEntity.badRequest().body(new ApiError("Свободных мест не осталось"));
+            }
+            application.setStatus(ApplicationStatus.APPROVED);
+            internship.setJoinedCount(internship.getJoinedCount() + 1);
+            internshipRepository.save(internship);
+        } else {
+            application.setStatus(ApplicationStatus.PENDING);
+        }
+
+        applicationRepository.save(application);
+        return ResponseEntity.ok(ApplicationResponse.from(application));
     }
 
     @GetMapping("/job-market")
@@ -145,12 +160,23 @@ public class ApiStudentController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(new ApiError("Доступ только для верифицированных студентов"));
         }
+        List<Application> myApps = applicationRepository.findByStudent(student);
+        Set<Long> appliedInternshipIds = myApps.stream()
+                .map(a -> a.getInternship().getId())
+                .collect(Collectors.toSet());
+
         List<InternshipResponse> jobs = internshipRepository.findAll().stream()
                 .filter(i -> i.getCompany() != null)
                 .filter(i -> i.getStatus() == InternshipStatus.APPROVED)
                 .map(InternshipResponse::from)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(Map.of("jobs", jobs));
+                .toList();
+        return ResponseEntity.ok(Map.of(
+                "jobs", jobs,
+                "appliedInternshipIds", appliedInternshipIds,
+                "acceptedCompanyInternships", authorizationService.countAcceptedCompanyInternships(student),
+                "maxCompanyInternships", AuthorizationService.MAX_COMPANY_INTERNSHIPS,
+                "canTakeMoreInternships", authorizationService.canTakeMoreCompanyInternships(student)
+        ));
     }
 
     @GetMapping("/profile")
@@ -211,18 +237,11 @@ public class ApiStudentController {
     public ResponseEntity<?> chat(@PathVariable Long internshipId,
                                   @AuthenticationPrincipal UserDetails principal) {
         User me = currentUser(principal);
-        Internship internship = internshipRepository.findById(internshipId).orElseThrow();
+        Internship internship = internshipRepository.findById(internshipId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        authorizationService.assertStudentCompanyChatAccess(me, internship);
+        User companyUser = authorizationService.requireCompanyChatReceiver(internship);
 
-        boolean isAccepted = applicationRepository.findByStudent(me).stream()
-                .anyMatch(app -> app.getInternship().getId().equals(internshipId)
-                        && (app.getStatus() == ApplicationStatus.ACCEPTED
-                        || app.getStatus() == ApplicationStatus.APPROVED));
-
-        if (!isAccepted) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiError("Чат недоступен"));
-        }
-
-        User companyUser = internship.getCompany().getUser();
         List<MessageResponse> history = messageRepository
                 .findByInternshipIdAndSenderIdAndReceiverIdOrInternshipIdAndSenderIdAndReceiverIdOrderBySentAtAsc(
                         internshipId, me.getId(), companyUser.getId(),
@@ -244,12 +263,27 @@ public class ApiStudentController {
     public MessageResponse sendMessage(@RequestBody Map<String, Object> body,
                                        @AuthenticationPrincipal UserDetails principal) {
         User me = currentUser(principal);
+        if (body.get("internshipId") == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Укажите internshipId");
+        }
         Long internshipId = Long.valueOf(body.get("internshipId").toString());
-        Long receiverId = Long.valueOf(body.get("receiverId").toString());
-        String content = body.get("content").toString();
+        String content = body.get("content") != null ? body.get("content").toString().trim() : "";
+        if (content.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Пустое сообщение");
+        }
 
-        User receiver = userRepository.findById(receiverId).orElseThrow();
-        Internship internship = internshipRepository.findById(internshipId).orElseThrow();
+        Internship internship = internshipRepository.findById(internshipId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Вакансия не найдена"));
+
+        // 1) заявка студента на эту вакансию; 2) статус ACCEPTED или APPROVED
+        authorizationService.assertStudentCompanyChatAccess(me, internship);
+
+        // 3) получатель — только user компании этой вакансии (не из произвольного receiverId)
+        User receiver = authorizationService.requireCompanyChatReceiver(internship);
+        if (body.get("receiverId") != null) {
+            Long claimedReceiverId = Long.valueOf(body.get("receiverId").toString());
+            authorizationService.assertReceiverIdMatchesCompanyUser(claimedReceiverId, internship);
+        }
 
         Message msg = new Message();
         msg.setSender(me);
@@ -260,7 +294,7 @@ public class ApiStudentController {
         messageRepository.save(msg);
 
         if (receiver.getTelegramChatId() != null) {
-            telegramBotService.sendNotification(receiver.getTelegramChatId(),
+            telegramNotifications.sendNotification(receiver.getTelegramChatId(),
                     "🎓 Новый вопрос от студента " + me.getUsername() +
                             " по вакансии \"" + internship.getTitle() + "\":\n\n" + content);
         }

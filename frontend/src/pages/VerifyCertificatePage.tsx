@@ -107,11 +107,11 @@ export default function VerifyCertificatePage() {
               size="lg"
               value={input}
               onChange={(e) => setInput(e.target.value.toUpperCase())}
-              placeholder="IPRO-2026-000042"
+              placeholder="IPRO-2026-K7M9P2XQ4R1N"
               className="font-monospace"
               spellCheck={false}
             />
-            <Form.Text>Формат: IPRO-ГОД-НОМЕР</Form.Text>
+            <Form.Text>Формат: IPRO-ГОД-ТОКЕН (12 символов)</Form.Text>
           </Form.Group>
           <Button type="submit" className="btn-gradient w-100" disabled={loading || !input.trim()}>
             {loading ? (

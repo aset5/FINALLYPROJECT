@@ -14,6 +14,7 @@ import com.example.internship.repositories.ProgramLessonRepository;
 import com.example.internship.repositories.ProgramMaterialRepository;
 import com.example.internship.repositories.QuizQuestionRepository;
 import com.example.internship.repositories.UserRepository;
+import com.example.internship.services.AuthorizationService;
 import com.example.internship.services.CertificateService;
 import com.example.internship.services.StudentAchievementService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,6 +45,7 @@ public class ApiUniversityAdminController {
     private final MessageRepository messageRepository;
     private final StudentAchievementService studentAchievementService;
     private final CertificateService certificateService;
+    private final AuthorizationService authorizationService;
 
     public ApiUniversityAdminController(UserRepository userRepository,
                                         InternshipRepository internshipRepository,
@@ -54,7 +56,8 @@ public class ApiUniversityAdminController {
                                         LessonProgressRepository lessonProgressRepository,
                                         MessageRepository messageRepository,
                                         StudentAchievementService studentAchievementService,
-                                        CertificateService certificateService) {
+                                        CertificateService certificateService,
+                                        AuthorizationService authorizationService) {
         this.userRepository = userRepository;
         this.internshipRepository = internshipRepository;
         this.applicationRepository = applicationRepository;
@@ -65,6 +68,7 @@ public class ApiUniversityAdminController {
         this.messageRepository = messageRepository;
         this.studentAchievementService = studentAchievementService;
         this.certificateService = certificateService;
+        this.authorizationService = authorizationService;
     }
 
     @GetMapping("/dashboard")
@@ -108,8 +112,10 @@ public class ApiUniversityAdminController {
 
     @Transactional
     @DeleteMapping("/internships/{id}")
-    public void deleteInternship(@PathVariable Long id) {
-        Internship internship = internshipRepository.findById(id).orElseThrow();
+    public void deleteInternship(@PathVariable Long id,
+                                 @AuthenticationPrincipal UserDetails principal) {
+        User user = userRepository.findByUsername(principal.getUsername()).orElseThrow();
+        Internship internship = authorizationService.requireOwnUniversityInternship(id, user);
         lessonProgressRepository.deleteByApplication_Internship_Id(id);
         messageRepository.deleteByInternship(internship);
         applicationRepository.deleteByInternship(internship);
@@ -124,7 +130,7 @@ public class ApiUniversityAdminController {
                                                @RequestBody Internship internship,
                                                @AuthenticationPrincipal UserDetails principal) {
         User user = userRepository.findByUsername(principal.getUsername()).orElseThrow();
-        Internship existing = requireOwnUniversityInternship(id, user);
+        Internship existing = authorizationService.requireOwnUniversityInternship(id, user);
         existing.setTitle(internship.getTitle());
         existing.setDescription(internship.getDescription());
         existing.setStudyMaterials(internship.getStudyMaterials());
@@ -133,23 +139,15 @@ public class ApiUniversityAdminController {
         return InternshipResponse.from(internshipRepository.save(existing));
     }
 
-    private Internship requireOwnUniversityInternship(Long id, User user) {
-        University university = user.getUniversity();
-        if (university == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-        Internship existing = internshipRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (existing.getUniversity() == null
-                || !existing.getUniversity().getId().equals(university.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-        return existing;
-    }
-
     @PostMapping("/applications/{id}/verify")
-    public ApplicationResponse verify(@PathVariable Long id) {
-        Application app = applicationRepository.findById(id).orElseThrow();
+    public ApplicationResponse verify(@PathVariable Long id,
+                                        @AuthenticationPrincipal UserDetails principal) {
+        User admin = userRepository.findByUsername(principal.getUsername()).orElseThrow();
+        Application app = authorizationService.requireOwnUniversityApplication(id, admin);
+        if (app.getStatus() != ApplicationStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Верификация возможна только для завершённых программ");
+        }
         app.setStatus(ApplicationStatus.VERIFIED);
         applicationRepository.save(app);
         return ApplicationResponse.from(app);
@@ -161,6 +159,7 @@ public class ApiUniversityAdminController {
         User admin = userRepository.findByUsername(principal.getUsername()).orElseThrow();
         User student = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        authorizationService.assertUniversityCanViewStudent(admin, student);
         return new StudentPublicProfileResponse(
                 UserResponse.from(student),
                 studentAchievementService.completedProgramsForStudentAtUniversity(student, admin.getUniversity())

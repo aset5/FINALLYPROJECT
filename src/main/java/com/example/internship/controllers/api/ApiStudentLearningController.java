@@ -4,9 +4,10 @@ import com.example.internship.dto.*;
 import com.example.internship.models.*;
 import com.example.internship.repositories.MessageRepository;
 import com.example.internship.repositories.UserRepository;
+import com.example.internship.services.AuthorizationService;
 import com.example.internship.services.CertificateService;
 import com.example.internship.services.LearningService;
-import com.example.internship.services.TelegramBotService;
+import com.example.internship.services.TelegramNotificationSender;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.io.Resource;
@@ -38,18 +39,21 @@ public class ApiStudentLearningController {
     private final MessageRepository messageRepository;
     private final LearningService learningService;
     private final CertificateService certificateService;
-    private final TelegramBotService telegramBotService;
+    private final TelegramNotificationSender telegramNotifications;
+    private final AuthorizationService authorizationService;
 
     public ApiStudentLearningController(UserRepository userRepository,
                                         MessageRepository messageRepository,
                                         LearningService learningService,
                                         CertificateService certificateService,
-                                        TelegramBotService telegramBotService) {
+                                        TelegramNotificationSender telegramNotifications,
+                                        AuthorizationService authorizationService) {
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
         this.learningService = learningService;
         this.certificateService = certificateService;
-        this.telegramBotService = telegramBotService;
+        this.telegramNotifications = telegramNotifications;
+        this.authorizationService = authorizationService;
     }
 
     private User currentUser(UserDetails principal) {
@@ -110,10 +114,8 @@ public class ApiStudentLearningController {
     @GetMapping("/files/{storedName}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String storedName,
                                                    @AuthenticationPrincipal UserDetails principal) throws IOException {
-        currentUser(principal);
-        if (storedName.contains("..") || storedName.contains("/")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
+        User student = currentUser(principal);
+        authorizationService.assertStudentCanDownloadLearningFile(student, storedName);
         Path path = Paths.get(UPLOAD_DIR).resolve(storedName);
         if (!Files.exists(path)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -174,7 +176,7 @@ public class ApiStudentLearningController {
         messageRepository.save(msg);
 
         if (receiver.getTelegramChatId() != null) {
-            telegramBotService.sendNotification(receiver.getTelegramChatId(),
+            telegramNotifications.sendNotification(receiver.getTelegramChatId(),
                     "📚 Вопрос от студента " + me.getUsername() +
                             " по программе \"" + internship.getTitle() + "\":\n\n" + content);
         }

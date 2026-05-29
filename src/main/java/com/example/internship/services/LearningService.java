@@ -29,19 +29,22 @@ public class LearningService {
     private final ProgramMaterialRepository materialRepository;
     private final LessonProgressRepository progressRepository;
     private final QuizQuestionRepository quizQuestionRepository;
+    private final CertificateNumberService certificateNumberService;
 
     public LearningService(ApplicationRepository applicationRepository,
                            InternshipRepository internshipRepository,
                            ProgramLessonRepository lessonRepository,
                            ProgramMaterialRepository materialRepository,
                            LessonProgressRepository progressRepository,
-                           QuizQuestionRepository quizQuestionRepository) {
+                           QuizQuestionRepository quizQuestionRepository,
+                           CertificateNumberService certificateNumberService) {
         this.applicationRepository = applicationRepository;
         this.internshipRepository = internshipRepository;
         this.lessonRepository = lessonRepository;
         this.materialRepository = materialRepository;
         this.progressRepository = progressRepository;
         this.quizQuestionRepository = quizQuestionRepository;
+        this.certificateNumberService = certificateNumberService;
     }
 
     @Transactional(readOnly = true)
@@ -270,6 +273,11 @@ public class LearningService {
 
     @Transactional
     public Map<String, Object> submitQuiz(Application app, Map<String, Integer> answers) {
+        if (app.getQuizScorePercent() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Тест уже сдан. Повторная попытка невозможна.");
+        }
+
         List<QuizQuestion> questions = quizQuestionRepository
                 .findByInternshipIdOrderBySortOrderAscIdAsc(app.getInternship().getId());
         if (questions.isEmpty()) {
@@ -328,6 +336,7 @@ public class LearningService {
         app.setCompletedAt(LocalDateTime.now());
         app.setFinalGradePercent(detail.grades().overallGradePercent());
         app.setGradeLetter(detail.grades().gradeLetter());
+        certificateNumberService.assignCertificateToken(app);
         applicationRepository.save(app);
         return ApplicationResponse.from(app);
     }

@@ -37,6 +37,10 @@ public class Application {
 
     private String gradeLetter;
 
+    /** Случайный код для номера сертификата (не предсказуем по id заявки). */
+    @Column(name = "certificate_token", unique = true, length = 12)
+    private String certificateToken;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

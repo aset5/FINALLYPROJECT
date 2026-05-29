@@ -27,20 +27,45 @@ public class CertificateVerificationService {
         if (parsed.isEmpty()) {
             return CertificateVerificationResponse.invalid(
                     certificateNumberService.normalize(rawNumber != null ? rawNumber : ""),
-                    "Неверный формат номера. Пример: IPRO-2026-000042");
+                    "Неверный формат номера. Пример: IPRO-2026-K7M9P2XQ4R1N");
         }
 
         CertificateNumberService.ParsedCertificateNumber number = parsed.get();
-        Application app = applicationRepository.findByIdWithDetails(number.applicationId()).orElse(null);
+        Application app = resolveApplication(number);
         if (app == null || !CompletedProgramResponse.isCompletedUniversityProgram(app)) {
             return CertificateVerificationResponse.notFound(number.formatted());
         }
 
-        String expected = certificateNumberService.buildNumber(app);
-        if (!expected.equalsIgnoreCase(number.formatted())) {
+        if (!matchesCertificateNumber(app, number)) {
             return CertificateVerificationResponse.notFound(number.formatted());
         }
 
+        String displayNumber = number.lookupType()
+                == CertificateNumberService.ParsedCertificateNumber.LookupType.TOKEN
+                ? certificateNumberService.buildNumber(app)
+                : number.formatted();
+
+        return buildValidResponse(app, displayNumber);
+    }
+
+    private Application resolveApplication(CertificateNumberService.ParsedCertificateNumber number) {
+        if (number.lookupType() == CertificateNumberService.ParsedCertificateNumber.LookupType.TOKEN) {
+            return applicationRepository.findByCertificateTokenWithDetails(number.token()).orElse(null);
+        }
+        return applicationRepository.findByIdWithDetails(number.applicationId()).orElse(null);
+    }
+
+    private boolean matchesCertificateNumber(Application app,
+                                             CertificateNumberService.ParsedCertificateNumber number) {
+        if (number.lookupType() == CertificateNumberService.ParsedCertificateNumber.LookupType.TOKEN) {
+            String expected = certificateNumberService.buildNumber(app);
+            return expected.equalsIgnoreCase(number.formatted());
+        }
+        String legacyExpected = certificateNumberService.formatLegacy(number.year(), app.getId());
+        return legacyExpected.equalsIgnoreCase(number.formatted());
+    }
+
+    private CertificateVerificationResponse buildValidResponse(Application app, String certNumber) {
         User student = app.getStudent();
         Internship program = app.getInternship();
         String studentName = student.getFullName() != null && !student.getFullName().isBlank()
@@ -53,7 +78,7 @@ public class CertificateVerificationService {
 
         return new CertificateVerificationResponse(
                 true,
-                expected,
+                certNumber,
                 studentName,
                 program.getTitle(),
                 program.getUniversity() != null ? program.getUniversity().getName() : null,

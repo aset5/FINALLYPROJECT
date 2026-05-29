@@ -3,11 +3,13 @@ package com.example.internship.controllers.api;
 import com.example.internship.dto.*;
 import com.example.internship.models.*;
 import com.example.internship.repositories.*;
+import com.example.internship.services.AuthorizationService;
 import com.example.internship.services.CertificateService;
 import com.example.internship.services.StudentAchievementService;
-import com.example.internship.services.TelegramBotService;
+import com.example.internship.services.TelegramNotificationSender;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import jakarta.transaction.Transactional;
@@ -43,9 +45,10 @@ public class ApiCompanyController {
     private final CompanyRepository companyRepository;
     private final MessageRepository messageRepository;
     private final LessonProgressRepository lessonProgressRepository;
-    private final TelegramBotService telegramBotService;
+    private final TelegramNotificationSender telegramNotifications;
     private final StudentAchievementService studentAchievementService;
     private final CertificateService certificateService;
+    private final AuthorizationService authorizationService;
 
     public ApiCompanyController(InternshipRepository internshipRepository,
                                 UserRepository userRepository,
@@ -53,35 +56,63 @@ public class ApiCompanyController {
                                 CompanyRepository companyRepository,
                                 MessageRepository messageRepository,
                                 LessonProgressRepository lessonProgressRepository,
-                                TelegramBotService telegramBotService,
+                                TelegramNotificationSender telegramNotifications,
                                 StudentAchievementService studentAchievementService,
-                                CertificateService certificateService) {
+                                CertificateService certificateService,
+                                AuthorizationService authorizationService) {
         this.internshipRepository = internshipRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
         this.companyRepository = companyRepository;
         this.messageRepository = messageRepository;
         this.lessonProgressRepository = lessonProgressRepository;
-        this.telegramBotService = telegramBotService;
+        this.telegramNotifications = telegramNotifications;
         this.studentAchievementService = studentAchievementService;
         this.certificateService = certificateService;
+        this.authorizationService = authorizationService;
     }
 
     private User currentUser(UserDetails principal) {
         return userRepository.findByUsername(principal.getUsername()).orElseThrow();
     }
 
-    private Internship requireOwnCompanyInternship(Long id, User user) {
+    private Company requireCompany(User user) {
         Company company = companyRepository.findByUserId(user.getId());
         if (company == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Сначала заполните профиль компании");
         }
+        return company;
+    }
+
+    private Internship requireOwnCompanyInternship(Long id, User user) {
+        Company company = requireCompany(user);
         Internship internship = internshipRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (internship.getCompany() == null || !internship.getCompany().getId().equals(company.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Нет доступа к этой вакансии");
         }
         return internship;
+    }
+
+    private Application requireOwnCompanyApplication(Long applicationId, User user) {
+        Company company = requireCompany(user);
+        Application app = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Internship internship = app.getInternship();
+        if (internship == null
+                || internship.getCompany() == null
+                || !internship.getCompany().getId().equals(company.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Нет доступа к этой заявке");
+        }
+        return app;
+    }
+
+    private void assertStudentAppliedToCompanyInternship(User student, Internship internship) {
+        if (!applicationRepository.existsByStudentAndInternship(student, internship)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Студент не откликался на эту вакансию");
+        }
     }
 
     @GetMapping("/dashboard")
@@ -115,11 +146,7 @@ public class ApiCompanyController {
     public InternshipResponse addInternship(@RequestBody Internship internship,
                                             @AuthenticationPrincipal UserDetails principal) {
         User user = currentUser(principal);
-        Company company = companyRepository.findByUserId(user.getId());
-        if (company == null) {
-            throw new IllegalStateException("Сначала заполните профиль компании");
-        }
-        internship.setCompany(company);
+        internship.setCompany(requireCompany(user));
         internship.setStatus(InternshipStatus.PENDING);
         return InternshipResponse.from(internshipRepository.save(internship));
     }
@@ -144,28 +171,45 @@ public class ApiCompanyController {
     }
 
     @PostMapping("/profile")
-    public CompanyResponse saveProfile(@RequestBody Company company,
+    public CompanyResponse saveProfile(@Valid @RequestBody CompanyProfileRequest request,
                                        @AuthenticationPrincipal UserDetails principal) {
         User user = currentUser(principal);
-        company.setUser(user);
+        Company company = companyRepository.findByUserId(user.getId());
+        if (company == null) {
+            company = new Company();
+            company.setUser(user);
+        }
+        company.setName(request.name().trim());
+        company.setBin(request.bin() != null ? request.bin().trim() : null);
         return CompanyResponse.from(companyRepository.save(company));
     }
 
     @PostMapping("/applications/{id}/accept")
-    public ApplicationResponse accept(@PathVariable Long id) {
-        Application app = applicationRepository.findById(id).orElseThrow();
+    public ApplicationResponse accept(@PathVariable Long id,
+                                      @AuthenticationPrincipal UserDetails principal) {
+        Application app = requireOwnCompanyApplication(id, currentUser(principal));
+        if (app.getStatus() != ApplicationStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Принять можно только заявку в статусе PENDING");
+        }
+        authorizationService.assertStudentCanTakeInternshipSlot(app.getStudent());
         app.setStatus(ApplicationStatus.ACCEPTED);
         applicationRepository.save(app);
         if (app.getStudent().getTelegramChatId() != null) {
-            telegramBotService.sendNotification(app.getStudent().getTelegramChatId(),
+            telegramNotifications.sendNotification(app.getStudent().getTelegramChatId(),
                     "✅ Компания сіздің өтініміңізді қабылдады!");
         }
         return ApplicationResponse.from(app);
     }
 
     @PostMapping("/applications/{id}/reject")
-    public ApplicationResponse reject(@PathVariable Long id) {
-        Application app = applicationRepository.findById(id).orElseThrow();
+    public ApplicationResponse reject(@PathVariable Long id,
+                                      @AuthenticationPrincipal UserDetails principal) {
+        Application app = requireOwnCompanyApplication(id, currentUser(principal));
+        if (app.getStatus() != ApplicationStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Отклонить можно только заявку в статусе PENDING");
+        }
         app.setStatus(ApplicationStatus.REJECTED);
         applicationRepository.save(app);
         return ApplicationResponse.from(app);
@@ -176,7 +220,9 @@ public class ApiCompanyController {
                                     @PathVariable Long studentId,
                                     @AuthenticationPrincipal UserDetails principal) {
         User me = currentUser(principal);
+        Internship internship = requireOwnCompanyInternship(internshipId, me);
         User student = userRepository.findById(studentId).orElseThrow();
+        assertStudentAppliedToCompanyInternship(student, internship);
         List<MessageResponse> history = messageRepository
                 .findByInternshipIdAndSenderIdAndReceiverIdOrInternshipIdAndSenderIdAndReceiverIdOrderBySentAtAsc(
                         internshipId, me.getId(), student.getId(),
@@ -194,7 +240,8 @@ public class ApiCompanyController {
         String content = body.get("content").toString();
 
         User receiver = userRepository.findById(receiverId).orElseThrow();
-        Internship internship = internshipRepository.findById(internshipId).orElseThrow();
+        Internship internship = requireOwnCompanyInternship(internshipId, me);
+        assertStudentAppliedToCompanyInternship(receiver, internship);
 
         Message msg = new Message();
         msg.setSender(me);
@@ -205,7 +252,7 @@ public class ApiCompanyController {
         messageRepository.save(msg);
 
         if (receiver.getTelegramChatId() != null) {
-            telegramBotService.sendNotification(receiver.getTelegramChatId(),
+            telegramNotifications.sendNotification(receiver.getTelegramChatId(),
                     "📩 Новое сообщение от компании: " + content);
         }
         return MessageResponse.from(msg);
@@ -279,9 +326,12 @@ public class ApiCompanyController {
     }
 
     @GetMapping("/download/resume/{studentId}")
-    public ResponseEntity<Resource> downloadResume(@PathVariable Long studentId)
+    public ResponseEntity<Resource> downloadResume(@PathVariable Long studentId,
+                                                   @AuthenticationPrincipal UserDetails principal)
             throws MalformedURLException, IOException {
+        User companyUser = currentUser(principal);
         User student = userRepository.findById(studentId).orElseThrow();
+        studentAchievementService.assertCompanyCanViewStudent(companyUser, student);
         if (student.getResumePath() == null) {
             return ResponseEntity.notFound().build();
         }

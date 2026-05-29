@@ -45,4 +45,26 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             WHERE a.id = :id
             """)
     Optional<Application> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("""
+            SELECT a FROM Application a
+            JOIN FETCH a.student s
+            LEFT JOIN FETCH s.university
+            JOIN FETCH a.internship i
+            LEFT JOIN FETCH i.university
+            LEFT JOIN FETCH i.company
+            WHERE a.certificateToken = :token
+            """)
+    Optional<Application> findByCertificateTokenWithDetails(@Param("token") String token);
+
+    @Query("""
+            SELECT COUNT(a) FROM Application a
+            JOIN a.internship i
+            WHERE a.student.id = :studentId
+            AND i.company IS NOT NULL
+            AND a.status = :status
+            """)
+    long countByStudentIdAndCompanyInternshipAndStatus(
+            @Param("studentId") Long studentId,
+            @Param("status") ApplicationStatus status);
 }

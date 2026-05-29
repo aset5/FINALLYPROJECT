@@ -26,6 +26,7 @@ public class DatabaseSchemaFixer {
     public void fixSchema() {
         fixLessonProgressColumns();
         fixApplicationGradeColumns();
+        fixApplicationCertificateToken();
     }
 
     private void fixLessonProgressColumns() {
@@ -45,6 +46,24 @@ public class DatabaseSchemaFixer {
         addNullableBooleanColumn("application", "quiz_passed");
         addNullableIntColumn("application", "quiz_score_percent");
         addNullableTimestampColumn("application", "completed_at");
+    }
+
+    private void fixApplicationCertificateToken() {
+        if (!tableExists("application")) {
+            return;
+        }
+        addNullableVarcharColumn("application", "certificate_token", 12);
+        try {
+            if (columnExists("application", "certificate_token")) {
+                jdbc.execute("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS uq_application_certificate_token
+                        ON application (certificate_token)
+                        WHERE certificate_token IS NOT NULL
+                        """);
+            }
+        } catch (Exception e) {
+            log.warn("Индекс certificate_token: {}", e.getMessage());
+        }
     }
 
     private boolean tableExists(String table) {
