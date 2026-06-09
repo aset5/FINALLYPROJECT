@@ -26,6 +26,17 @@ public class Application {
     @Enumerated(EnumType.STRING)
     private ApplicationStatus status;
 
+    private Boolean quizPassed = false;
+
+    private Integer quizScorePercent;
+
+    private LocalDateTime completedAt;
+
+    /** Итоговая оценка за программу 0–100 */
+    private Integer finalGradePercent;
+
+    private String gradeLetter;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
