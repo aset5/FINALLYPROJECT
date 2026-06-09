@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea
+target
+frontend/node_modules
+frontend/dist
+node_modules
+uploads
+*.log
+*.dump
+.DS_Store
+.env
